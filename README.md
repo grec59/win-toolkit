@@ -28,7 +28,9 @@ Navigate to the directory containing the script:
 
 ## Script Execution
 
-Upon execution, this script shows a basic system summary and prompts the user for permission to continue with task selection. Upon receiving valid input, the prompt displays with an interactive GUI window for task selection. Choose 'Proceed' when satisfied with task selection. The script will execute automatically unless local user creation is selected. When creating a local user using the script utility, real-time credential input will be required.
+Upon execution, this script shows a basic system summary and prompts the user for permission to continue with task selection. Upon receiving valid input, the prompt displays with an interactive GUI window for task selection. 
+
+Choose 'Proceed' when satisfied with task selection. The script will execute automatically unless local user creation is selected. When creating a local user using the script utility, real-time credential input will be required.
 
 ## Known Issues
 
