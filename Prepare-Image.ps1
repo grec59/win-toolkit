@@ -26,6 +26,19 @@
 
 # --- Function Definitions ---
 
+function Write-Log {
+    param(
+        [string]$Message,
+        [string]$Log = 'C:\results.txt'
+    )
+
+    $time = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    $line = "$time $Message"
+
+    Write-Log $line
+    Add-Content -Path $Log -Value $line -ErrorAction SilentlyContinue
+}
+
 function Create-User {
     param(
         [Parameter(Mandatory)]
@@ -43,12 +56,11 @@ function Create-User {
 
     try {
         New-LocalUser @params -ErrorAction Stop
-        Write-Host "Created user $username"
+        Write-Log "Created user $username"
     } catch {
-        Write-Host "Failed to create user: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Log "Failed to create user: $($_.Exception.Message)" -ForegroundColor Red
     }
 }
-
 
 function Invoke-GroupPolicy {
     try {
@@ -57,7 +69,7 @@ function Invoke-GroupPolicy {
         Start-Sleep -Seconds 5
 }
     catch {
-        Write-Host "WARNING: Failed to update Computer Policy: $($_.Exception.Message)" -ForegroundColor Yellow  
+        Write-Log "WARNING: Failed to update Computer Policy: $($_.Exception.Message)" -ForegroundColor Yellow  
     }
 }
 function Execute-Actions {
@@ -78,9 +90,9 @@ function Execute-Actions {
     foreach ($action in $SCCMActions) {
         try {
             Invoke-WMIMethod -Namespace root\ccm -Class SMS_CLIENT -Name TriggerSchedule -ArgumentList $action.Guid -ErrorAction Stop | Out-Null
-            Write-Host "SUCCESS: $($action.Name)" -ForegroundColor Green
+            Write-Log "SUCCESS: $($action.Name)" -ForegroundColor Green
         } catch {
-            Write-Host "FAIL: $($action.Name) $($_.Exception.Message)" -ForegroundColor Red
+            Write-Log "FAIL: $($action.Name) $($_.Exception.Message)" -ForegroundColor Red
         }
         Start-Sleep -Seconds 2
     }
@@ -90,10 +102,21 @@ function Run-DellUpdates {
     $path = 'C:\Program Files\Dell\CommandUpdate\dcu-cli.exe'
     if (Test-Path $path) {
         Start-Sleep -Seconds 3
-        Write-Host "Dell Command application detected, starting updates..."
+        Write-Log "Dell Command application detected, starting updates..."
         & "$path" /applyUpdates -autoSuspendBitLocker=enable -forceupdate=enable -outputLog='C:\command.log'
     } else {
-        Write-Host "Dell Command application not detected, skipping updates..."
+        Write-Log "Dell Command application not detected, skipping updates..."
+    }
+}
+
+function Run-FirmwareUpdates {
+    $path = 'C:\Program Files\Dell\CommandUpdate\dcu-cli.exe'
+    if (Test-Path $path) {
+        Start-Sleep -Seconds 3
+        Write-Log "Dell Command application detected, starting updates..."
+        & "$path" /applyUpdates -updateType=bios,firmware -autoSuspendBitLocker=enable -forceupdate=enable -outputLog='C:\command.log'
+    } else {
+        Write-Log "Dell Command application not detected, skipping updates..."
     }
 }
 
@@ -138,7 +161,7 @@ Boot Volume Free Space: $bootVolume GB
 "@
 
 $messageTasks = @"
-
+Features Available:
 1. Update Group Policy
 2. Configuration Manager Tasks
 3. Install Dell System Updates
@@ -146,9 +169,9 @@ $messageTasks = @"
 
 "@
 
-Write-Host $messageHeader -ForegroundColor Cyan
-Write-Host $messageDetails -ForegroundColor Green
-Write-Host $messageTasks
+Write-Log $messageHeader -ForegroundColor Cyan
+Write-Log $messageDetails -ForegroundColor Green
+Write-Log $messageTasks
 
 # Confirmation
 while (($i = Read-Host "Press Y to continue or N to quit") -notmatch '^[YyNn]$') {}
@@ -204,19 +227,19 @@ if ($sel.CreateUser) {
 }
 
 if ($sel.GroupPolicy) {
-    Write-Host "Running Policy Updates..." -ForegroundColor Cyan
+    Write-Log "Running Policy Updates..." -ForegroundColor Cyan
     Invoke-GroupPolicy
 }
 
 if ($sel.ConfigMgr) {
-    Write-Host "Running Configuration Actions..." -ForegroundColor Cyan
+    Write-Log "Running Configuration Actions..." -ForegroundColor Cyan
     Execute-Actions
 }
 
 if ($sel.DellUpdates) {
-    Write-Host "Running System Updates..." -ForegroundColor Cyan
+    Write-Log "Running System Updates..." -ForegroundColor Cyan
     Run-DellUpdates
 }
 
-Write-Host "Script execution complete. See $log" -ForegroundColor Cyan
+Write-Log "Script execution complete. See $log" -ForegroundColor Cyan
 Start-Sleep 3
