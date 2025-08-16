@@ -141,7 +141,7 @@ Boot Volume Free Space: $bootVolume GB
 "@
 
 $messageTasks = @"
-Features Available:
+Actions Available:
 
 1. Update Group Policy
 2. Configuration Manager Tasks
