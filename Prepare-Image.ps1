@@ -54,10 +54,10 @@ function Invoke-GroupPolicy {
         Write-Host "Running Policy Update..." -ForegroundColor Cyan
         gpupdate /target:computer | out-null
         Start-Sleep -Seconds 5
-        Write-Host "Computer Policy update has completed successfully." -ForegroundColor Green
+        Write-Host "SUCCESS: Computer Policy update has completed successfully." -ForegroundColor Green
 }
     catch {
-        Write-Host "WARNING: Failed to update Computer Policy: $($_.Exception.Message)" -ForegroundColor Yellow  
+        Write-Host "FAIL: Failed to update Computer Policy: $($_.Exception.Message)" -ForegroundColor Yellow  
     }
 }
 function Execute-Actions {
