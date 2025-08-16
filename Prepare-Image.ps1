@@ -35,7 +35,7 @@ function Write-Log {
     $time = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
     $line = "$time $Message"
 
-    Write-Log $line
+    Write-Output $line
     Add-Content -Path $Log -Value $line -ErrorAction SilentlyContinue
 }
 
