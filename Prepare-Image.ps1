@@ -60,6 +60,7 @@ function Invoke-GroupPolicy {
         Write-Host "FAIL: Failed to update Computer Policy: $($_.Exception.Message)" -ForegroundColor Yellow  
     }
 }
+
 function Execute-Actions {
     Write-Host "Running Configuration Actions..." -ForegroundColor Cyan
     $SCCMActions = @(
