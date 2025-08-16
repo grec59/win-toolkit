@@ -132,6 +132,8 @@ Welcome to the Quick Utilities Script
 
 $messageDetails = @"
 
+System Summary:
+
 Computer Name: $computer
 CPU: $cpu
 Memory: $ram GB
@@ -140,7 +142,9 @@ Boot Volume Free Space: $bootVolume GB
 "@
 
 $messageTasks = @"
+
 Features Available:
+
 1. Update Group Policy
 2. Configuration Manager Tasks
 3. Install Dell System Updates
