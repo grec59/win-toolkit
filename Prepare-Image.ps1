@@ -114,7 +114,7 @@ function Run-FirmwareUpdates {
     if (Test-Path $path) {
         Start-Sleep -Seconds 3
         Write-Log "Dell Command application detected, starting updates..."
-        & "$path" /applyUpdates -updateType=bios,firmware -autoSuspendBitLocker=enable -forceupdate=enable -outputLog='C:\command.log'
+        & $path "/applyUpdates" "-updateType=bios,firmware" "-autoSuspendBitLocker=enable" "-forceupdate=enable" "-outputLog=C:\command.log"
     } else {
         Write-Log "Dell Command application not detected, skipping updates..."
     }
