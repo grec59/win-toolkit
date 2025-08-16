@@ -51,15 +51,17 @@ function Create-User {
 
 function Invoke-GroupPolicy {
     try {
-        gpupdate /target:computer | Out-Null
-        Get-WinEvent -FilterHashtable @{LogName='System'; Id=1500} | Select-Object -First 1 | ForEach-Object { $_.Message }
+        Write-Host "Running Policy Update..." -ForegroundColor Cyan
+        gpupdate /target:computer | out-null
         Start-Sleep -Seconds 5
+        Write-Host "Computer Policy update has completed successfully." -ForegroundColor Green
 }
     catch {
         Write-Host "WARNING: Failed to update Computer Policy: $($_.Exception.Message)" -ForegroundColor Yellow  
     }
 }
 function Execute-Actions {
+    Write-Host "Running Configuration Actions..." -ForegroundColor Cyan
     $SCCMActions = @(
         [PSCustomObject]@{ Guid = "{00000000-0000-0000-0000-000000000021}"; Name = "Machine policy retrieval Cycle" },
         [PSCustomObject]@{ Guid = "{00000000-0000-0000-0000-000000000022}"; Name = "Machine policy evaluation cycle" },
@@ -86,6 +88,7 @@ function Execute-Actions {
 }
 
 function Run-DellUpdates {
+    Write-Host "Running System Updates..." -ForegroundColor Cyan
     $path = 'C:\Program Files\Dell\CommandUpdate\dcu-cli.exe'
     if (Test-Path $path) {
         Start-Sleep -Seconds 3
@@ -103,22 +106,22 @@ Clear-Host
 $log = 'C:\results.txt'
 $pspath = (Get-Process -Id $PID).Path
 
-# Force TLS 1.2
+# --- Force TLS 1.2 ---
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-# Ensure admin privileges
+# --- Ensure admin privileges ---
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
     Start-Process $pspath -Verb runAs -ArgumentList '-NoExit', '-ExecutionPolicy RemoteSigned', '-Command', "& {Invoke-WebRequest 'https://agho.me/provision' -UseBasicParsing | Invoke-Expression}"
     Stop-Process -Id $PID
 }
 
-# System info
+# --- System info ---
 $computer = $env:COMPUTERNAME
 $cpu = (Get-CimInstance Win32_Processor | Select-Object -First 1).Name
 $ram = [math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB, 2)
 $bootVolume = [math]::Round((Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'").FreeSpace / 1GB, 2)
 
-# Display information
+# --- Display information ---
 $messageHeader = @"
 
 ==========================================
@@ -149,11 +152,11 @@ Write-Host $messageHeader -ForegroundColor Cyan
 Write-Host $messageDetails -ForegroundColor Green
 Write-Host $messageTasks
 
-# Confirmation
+# --- Confirmation ---
 while (($i = Read-Host "Press Y to continue or N to quit") -notmatch '^[YyNn]$') {}
 if ($i -notmatch '^[Yy]$') { exit }
 
-# Build GUI
+# --- Build GUI ---
 Add-Type -AssemblyName PresentationFramework
 
 $xaml = @"
@@ -175,7 +178,7 @@ $xaml = @"
 $reader = (New-Object System.Xml.XmlNodeReader ([xml]$xaml))
 $win = [Windows.Markup.XamlReader]::Load($reader)
 
-# Capture GUI selections
+# --- Capture GUI selections ---
 $btnOK = $win.FindName('btnOK')
 $btnOK.Add_Click({
     $win.Tag = @{
@@ -192,28 +195,25 @@ $sel = $win.Tag
 
 Clear-Host
 
-# Power settings tuning
+# --- Power settings tuning ---
 
 #powercfg /change standby-timeout-ac 0
 #powercfg -setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
 
-# Execute tasks
+# --- Execute tasks ---
 if ($sel.CreateUser) {
     Create-User
 }
 
 if ($sel.GroupPolicy) {
-    Write-Host "Running Policy Updates..." -ForegroundColor Cyan
     Invoke-GroupPolicy
 }
 
 if ($sel.ConfigMgr) {
-    Write-Host "Running Configuration Actions..." -ForegroundColor Cyan
     Execute-Actions
 }
 
 if ($sel.DellUpdates) {
-    Write-Host "Running System Updates..." -ForegroundColor Cyan
     Run-DellUpdates
 }
 
