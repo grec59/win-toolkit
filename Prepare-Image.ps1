@@ -42,7 +42,7 @@ function Create-User {
     }
 
     try {
-        New-LocalUser @params -ErrorAction Stop
+        New-LocalUser @params -ErrorAction Stop | Out-Null
         Write-Host "Created user: $username"
         "The user $username was succesfully created." | Out-File -FilePath $output -Encoding utf8 -Append
     } catch {
@@ -83,8 +83,10 @@ function Execute-Actions {
         try {
             Invoke-WMIMethod -Namespace root\ccm -Class SMS_CLIENT -Name TriggerSchedule -ArgumentList $action.Guid -ErrorAction Stop | Out-Null
             Write-Host "SUCCESS: $($action.Name)" -ForegroundColor Green
+            "SUCCESS: $($action.Name)" | Out-File -FilePath $output -Encoding utf8 -Append
         } catch {
             Write-Host "FAIL: $($action.Name) $($_.Exception.Message)" -ForegroundColor Red
+            "FAIL: $($action.Name)" | Out-File -FilePath $output -Encoding utf8 -Append
         }
         Start-Sleep -Seconds 2
     }
@@ -105,14 +107,16 @@ function Run-DellUpdates {
 function Disable-Sleep {
 
 # --- Power settings tuning ---
-
+# Write-Host "Disabling Sleep and Lid Closure action When Plugged In..."
+# Start-Sleep 2
 #powercfg /change standby-timeout-ac 0
 #powercfg -setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
-
+# Write-Host "Sleep and Lid Closure action When Plugged In has been disabled."
+"Sleep and Lid Closure action When Plugged In has been disabled. Check system power settings for additonal details." | Out-File -FilePath $output -Encoding utf8 -Append
 }
 
 function Initialize-Log {
-    Write-Host "Initializing Logging..." -ForegroundColor Cyan
+#    Write-Host "Initializing Logging..." -ForegroundColor Cyan
     
 # --- Prefer OneDrive\Desktop if available, otherwise use local Desktop ---
 
@@ -128,7 +132,7 @@ function Initialize-Log {
 
 New-Item -Path (Split-Path $output) -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
 
-Write-Host "Output will be saved to: $output"
+#Write-Host "Output will be saved to: $output"
 
 return $output
 
@@ -217,6 +221,7 @@ $xaml = @"
     <CheckBox Name='cbCM' Content=' Configuration Manager Tasks' Margin='5'/>
     <CheckBox Name='cbDell' Content=' Install Dell System Updates' Margin='5'/>
     <CheckBox Name='cbUser' Content=' Create a Local User Account' Margin='5'/>
+    <CheckBox Name='cbPowerSettings' Content=' Disable Sleep - TESTING' Margin='5'/>
     <StackPanel Orientation='Horizontal' HorizontalAlignment='Right' Margin='0 15 0 0'>
       <Button Name='btnOK' Width='75' Margin='5' IsDefault='True'>Proceed</Button>
       <Button Width='75' Margin='5' IsCancel='True'>Cancel</Button>
@@ -237,6 +242,7 @@ $btnOK.Add_Click({
         ConfigMgr  = $win.FindName('cbCM').IsChecked
         DellUpdates = $win.FindName('cbDell').IsChecked
         CreateUser = $win.FindName('cbUser').IsChecked
+        PowerConfig = $win.FindName('cbPowerSettings').IsChecked
     }
     $win.Close()
 })
