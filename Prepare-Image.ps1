@@ -130,7 +130,7 @@ New-Item -Path (Split-Path $output) -ItemType Directory -Force -ErrorAction Sile
 
 Write-Output "Output will be saved to: $output"
 
-return $output
+return $script:output
 
 }
 
