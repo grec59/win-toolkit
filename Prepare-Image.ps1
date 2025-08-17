@@ -93,11 +93,20 @@ function Run-DellUpdates {
     $path = 'C:\Program Files\Dell\CommandUpdate\dcu-cli.exe'
     if (Test-Path $path) {
         Start-Sleep -Seconds 3
-        Write-Host "Dell Command application detected, starting updates..."
+        Write-Host "Dell Command CLI application detected, starting updates..."
         & "$path" /applyUpdates -autoSuspendBitLocker=enable -forceupdate=enable -outputLog='C:\command.log'
     } else {
         Write-Host "Dell Command application not detected, skipping updates..."
     }
+}
+
+function Disable-Sleep {
+
+# --- Power settings tuning ---
+
+#powercfg /change standby-timeout-ac 0
+#powercfg -setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
+
 }
 
 # --- Script Logic ---
@@ -108,21 +117,25 @@ $log = 'C:\results.txt'
 $pspath = (Get-Process -Id $PID).Path
 
 # --- Force TLS 1.2 ---
+
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 # --- Ensure admin privileges ---
+
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
     Start-Process $pspath -Verb runAs -ArgumentList '-NoExit', '-ExecutionPolicy RemoteSigned', '-Command', "& {Invoke-WebRequest 'https://agho.me/provision' -UseBasicParsing | Invoke-Expression}"
     Stop-Process -Id $PID
 }
 
 # --- System info ---
+
 $computer = $env:COMPUTERNAME
 $cpu = (Get-CimInstance Win32_Processor | Select-Object -First 1).Name
 $ram = [math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB, 2)
 $bootVolume = [math]::Round((Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'").FreeSpace / 1GB, 2)
 
 # --- Display information ---
+
 $messageHeader = @"
 
 ==========================================
@@ -144,10 +157,11 @@ Boot Volume Free Space: $bootVolume GB
 $messageTasks = @"
 Actions Available:
 
-1. Update Group Policy
-2. Configuration Manager Tasks
-3. Install Dell System Updates
-4. Create a Local User Account
+- Update Group Policy
+- Configuration Manager Tasks
+- Install Dell System Updates
+- Create a Local User Account
+- Disable sleep on AC
 
 "@
 
@@ -160,6 +174,7 @@ while (($i = Read-Host "Press Y to continue or N to quit") -notmatch '^[YyNn]$')
 if ($i -notmatch '^[Yy]$') { exit }
 
 # --- Build GUI ---
+
 Add-Type -AssemblyName PresentationFramework
 
 $xaml = @"
@@ -182,6 +197,7 @@ $reader = (New-Object System.Xml.XmlNodeReader ([xml]$xaml))
 $win = [Windows.Markup.XamlReader]::Load($reader)
 
 # --- Capture GUI selections ---
+
 $btnOK = $win.FindName('btnOK')
 $btnOK.Add_Click({
     $win.Tag = @{
@@ -193,17 +209,15 @@ $btnOK.Add_Click({
     $win.Close()
 })
 
+$win.Topmost = $true
+$win.Activate()
 $win.ShowDialog() | Out-Null
 $sel = $win.Tag
 
 Clear-Host
 
-# --- Power settings tuning ---
-
-#powercfg /change standby-timeout-ac 0
-#powercfg -setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
-
 # --- Execute tasks ---
+
 if ($sel.CreateUser) {
     Create-User
 }
