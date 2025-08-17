@@ -153,7 +153,9 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
 
 # --- Logging ---
 
-Initialize-Log
+# --- Logging ---
+
+$output = Initialize-Log
 
 # --- System info ---
 
