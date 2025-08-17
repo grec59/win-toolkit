@@ -130,6 +130,8 @@ New-Item -Path (Split-Path $output) -ItemType Directory -Force -ErrorAction Sile
 
 Write-Output "Output will be saved to: $output"
 
+return $output
+
 }
 
 # --- Script Logic ---
@@ -148,6 +150,10 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
     Start-Process $pspath -Verb runAs -ArgumentList '-NoExit', '-ExecutionPolicy RemoteSigned', '-Command', "& {Invoke-WebRequest 'https://agho.me/provision' -UseBasicParsing | Invoke-Expression}"
     Stop-Process -Id $PID
 }
+
+# --- Logging ---
+
+Initialize-Log
 
 # --- System info ---
 
@@ -243,8 +249,6 @@ $sel = $win.Tag
 Clear-Host
 
 # --- Execute tasks ---
-
-Initialize-Log
 
 if ($sel.CreateUser) {
     Create-User
