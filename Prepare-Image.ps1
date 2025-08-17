@@ -273,7 +273,7 @@ if ($sel.DellUpdates) {
 }
 
 if ($sel.PowerConfig) {
-    Run-Disable-Sleep
+    Disable-Sleep
 }
 
 Write-Host "Script execution complete. See $output" -ForegroundColor Cyan
