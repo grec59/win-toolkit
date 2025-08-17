@@ -43,9 +43,11 @@ function Create-User {
 
     try {
         New-LocalUser @params -ErrorAction Stop
-        Write-Host "Created user $username"
+        Write-Host "Created user: $username"
+        "The user $username was succesfully created." | Out-File -FilePath $output -Encoding utf8 -Append
     } catch {
         Write-Host "Failed to create user: $($_.Exception.Message)" -ForegroundColor Red
+        "The attempt to create user $username failed. $($_.Exception.Message)" | Out-File -FilePath $output -Encoding utf8 -Append
     }
 }
 
@@ -109,11 +111,31 @@ function Disable-Sleep {
 
 }
 
+function Initialize-Log {
+    Write-Host "Initializing Logging..." -ForegroundColor Cyan
+    
+# --- Prefer OneDrive\Desktop if available, otherwise use local Desktop ---
+
+    $desktop = [Environment]::GetFolderPath("Desktop")
+    $output = if ($env:OneDrive -and (Test-Path $env:OneDrive)) {
+    Join-Path $env:OneDrive "Desktop\results.txt"
+    } 
+    else {
+    Join-Path $desktop "results.txt"
+    }
+
+# --- Ensure directory exists ---
+
+New-Item -Path (Split-Path $output) -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
+
+Write-Output "Output will be saved to: $output"
+
+}
+
 # --- Script Logic ---
 
 Clear-Host
 
-$log = 'C:\results.txt'
 $pspath = (Get-Process -Id $PID).Path
 
 # --- Force TLS 1.2 ---
@@ -134,43 +156,47 @@ $cpu = (Get-CimInstance Win32_Processor | Select-Object -First 1).Name
 $ram = [math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB, 2)
 $bootVolume = [math]::Round((Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'").FreeSpace / 1GB, 2)
 
+
 # --- Display information ---
 
 $messageHeader = @"
 
-==========================================
-Welcome to the Quick Utilities Script
-==========================================
+ ==========================================
+ Welcome to the Quick Utilities Script
+ ==========================================
 
 "@
 
 $messageDetails = @"
-System Summary:
+ System Summary:
 
-Computer Name: $computer
-CPU: $cpu
-Memory: $ram GB
-Boot Volume Free Space: $bootVolume GB
+ Computer Name: $computer
+ CPU: $cpu
+ Memory: $ram GB
+ Boot Volume Free Space: $bootVolume GB
 
 "@
 
 $messageTasks = @"
-Actions Available:
+ Actions Available:
 
-- Update Group Policy
-- Configuration Manager Tasks
-- Install Dell System Updates
-- Create a Local User Account
-- Disable sleep on AC
+ - Update Group Policy
+ - Configuration Manager Tasks
+ - Install Dell System Updates
+ - Create a Local User Account
+ - Disable sleep on AC
 
 "@
 
 Write-Host $messageHeader -ForegroundColor Cyan
-Write-Host $messageDetails -ForegroundColor Green
+$messageHeader | Out-File -FilePath $output -Encoding utf8 -Append
+Write-Host $messageDetails
+$messageDetails | Out-File -FilePath $output -Encoding utf8 -Append
 Write-Host $messageTasks
 
 # --- Confirmation ---
-while (($i = Read-Host "Press Y to continue or N to quit") -notmatch '^[YyNn]$') {}
+
+while (($i = Read-Host " Press Y to continue or N to quit") -notmatch '^[YyNn]$') {}
 if ($i -notmatch '^[Yy]$') { exit }
 
 # --- Build GUI ---
@@ -217,6 +243,8 @@ $sel = $win.Tag
 Clear-Host
 
 # --- Execute tasks ---
+
+Initialize-Log
 
 if ($sel.CreateUser) {
     Create-User
