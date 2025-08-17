@@ -128,7 +128,7 @@ function Initialize-Log {
 
 New-Item -Path (Split-Path $output) -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
 
-Write-Output "Output will be saved to: $output"
+Write-Host "Output will be saved to: $output"
 
 return $output
 
@@ -150,8 +150,6 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
     Start-Process $pspath -Verb runAs -ArgumentList '-NoExit', '-ExecutionPolicy RemoteSigned', '-Command', "& {Invoke-WebRequest 'https://agho.me/provision' -UseBasicParsing | Invoke-Expression}"
     Stop-Process -Id $PID
 }
-
-# --- Logging ---
 
 # --- Logging ---
 
@@ -268,5 +266,5 @@ if ($sel.DellUpdates) {
     Run-DellUpdates
 }
 
-Write-Host "Script execution complete. See $log" -ForegroundColor Cyan
+Write-Host "Script execution complete. See $output" -ForegroundColor Cyan
 Start-Sleep 3
