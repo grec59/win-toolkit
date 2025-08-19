@@ -10,6 +10,7 @@ This PowerShell script provides a streamlined way to perform essential system pr
 - Initiate Configuration Manager client actions
 - Install Dell system updates
 - Create a local user account
+- Disable Sleep and Lid Close Action on AC
 
 ## Requirements
 
@@ -20,6 +21,7 @@ This PowerShell script provides a streamlined way to perform essential system pr
 
 ## Usage
 
+Open PowerShell as Administrator
 Navigate to the directory containing the script:
 
    ```powershell
@@ -35,8 +37,8 @@ Choose 'Proceed' when satisfied with task selection. The script will execute aut
 ## Known Issues
 
 1. Task selection GUI may not appear in the foreground
-2. UEFI updates may fail on certain hardware models
-3. Dell system updates may require approval to begin installation when using EDR or Application Whitelisting software
+2. Dell UEFI updates may fail on certain newer hardware models
+3. Dell firmware updates may require EDR approval to begin installation
 4. Dell CLI utility may fail to be invoked if Dell Command is self-updating during task execution
 
 ## Notes
