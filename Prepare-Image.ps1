@@ -51,8 +51,12 @@ function Create-User {
     try {
         New-LocalUser @params -ErrorAction Stop | Out-Null
         Write-Host "SUCCESS: Created new user: $username"
+        "SUCCESS: Created new user: $username" | Out-File -FilePath $output -Encoding utf8 -Append
+        Start-Sleep 2
     } catch {
         Write-Host "FAIL: Unable to create user: $($_.Exception.Message)" -ForegroundColor Red
+        "FAIL: Unable to create user: $($_.Exception.Message)" | Out-File -FilePath $output -Encoding utf8 -Append
+        Start-Sleep 2
     }
 }
 
