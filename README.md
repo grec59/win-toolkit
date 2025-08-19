@@ -37,7 +37,7 @@ Choose 'Proceed' when satisfied with task selection. The script will execute aut
 1. Task selection GUI may not appear in the foreground
 2. UEFI updates may fail on certain hardware models
 3. Dell system updates may require approval to begin installation when using EDR or Application Whitelisting software
-4. Dell CLI utility may fail to be invoked if the client is self-updating during task execution
+4. Dell CLI utility may fail to be invoked if Dell Command is self-updating during task execution
 
 ## Notes
    
