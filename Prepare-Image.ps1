@@ -27,11 +27,16 @@
 # --- Function Definitions ---
 
 function Create-User {
-    Write-Host "Creating Local User Account..." -ForegroundColor Cyan
     param(
-        [Parameter(Mandatory)]
         [PSCredential]$Credential
     )
+
+    Write-Host "Creating Local User Account..." -ForegroundColor Cyan
+
+    if (-not $Credential) {
+        $Credential = Get-Credential -Message "Enter credentials for the new local user:"
+    }
+
     $username = $Credential.UserName
     $password = $Credential.Password
 
@@ -45,10 +50,8 @@ function Create-User {
     try {
         New-LocalUser @params -ErrorAction Stop | Out-Null
         Write-Host "Created user: $username"
-        "The user $username was succesfully created." | Out-File -FilePath $output -Encoding utf8 -Append
     } catch {
         Write-Host "Failed to create user: $($_.Exception.Message)" -ForegroundColor Red
-        "The attempt to create user $username failed. $($_.Exception.Message)" | Out-File -FilePath $output -Encoding utf8 -Append
     }
 }
 
