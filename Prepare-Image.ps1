@@ -27,6 +27,7 @@
 # --- Function Definitions ---
 
 function Create-User {
+    Write-Host "Creating Local User Account..." -ForegroundColor Cyan
     param(
         [Parameter(Mandatory)]
         [PSCredential]$Credential
@@ -118,7 +119,8 @@ powercfg /change standby-timeout-ac 0
 "powercfg /change standby-timeout-ac 0" | Out-File -FilePath $output -Encoding utf8 -Append
 powercfg -setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
 "powercfg -setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0" | Out-File -FilePath $output -Encoding utf8 -Append
-Write-Host "Sleep and Lid Closure action When Plugged In has been disabled."
+Start-Sleep 2
+Write-Host "Sleep and Lid Closure action When Plugged In was successfully disabled." -ForegroundColor -Green
 "Sleep and Lid Closure action When Plugged In has been disabled." | Out-File -FilePath $output -Encoding utf8 -Append
 }
 
