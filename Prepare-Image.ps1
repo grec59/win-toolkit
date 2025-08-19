@@ -266,7 +266,7 @@ $btnOK.Add_Click({
 
 $win.Topmost = $true
 $win.Activate()
-$null = $win.ShowDialog()
+$win.ShowDialog() | out-null
 $sel = $win.Tag
 
 Clear-Host
@@ -295,5 +295,5 @@ if ($sel.PowerConfig) {
 
 "Script execution complete." | Out-File -FilePath $output -Encoding utf8 -Append
 Write-Host "Script execution complete. See $output" -ForegroundColor Cyan
-Write-Host "See $output" -ForegroundColor Cyan
+ii $output
 Start-Sleep 3
