@@ -295,4 +295,4 @@ if ($sel.PowerConfig) {
 
 "Script execution complete." | Out-File -FilePath $output -Encoding utf8 -Append
 Write-Host "Script execution complete. See $output" -ForegroundColor Cyan
-Start-Sleep 3
+Start-Sleep 2
