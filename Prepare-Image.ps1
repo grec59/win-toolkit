@@ -35,6 +35,7 @@ function Create-User {
 
     if (-not $Credential) {
         $Credential = Get-Credential -Message "Enter credentials for the new local user:"
+        if (-not $Credential) { return }
     }
 
     $username = $Credential.UserName
@@ -123,7 +124,7 @@ powercfg /change standby-timeout-ac 0
 powercfg -setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
 "powercfg -setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0" | Out-File -FilePath $output -Encoding utf8 -Append
 Start-Sleep 2
-Write-Host "Sleep and Lid Closure action When Plugged In was successfully disabled." -ForegroundColor -Green
+Write-Host "Sleep and Lid Closure action When Plugged In was successfully disabled." -ForegroundColor Green
 "Sleep and Lid Closure action When Plugged In has been disabled." | Out-File -FilePath $output -Encoding utf8 -Append
 }
 
