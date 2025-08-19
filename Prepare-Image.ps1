@@ -237,7 +237,7 @@ $xaml = @"
     <CheckBox Name='cbCM' Content=' Configuration Manager Tasks' Margin='5'/>
     <CheckBox Name='cbDell' Content=' Install Dell System Updates' Margin='5'/>
     <CheckBox Name='cbUser' Content=' Create a Local User Account' Margin='5'/>
-    <CheckBox Name='cbPowerSettings' Content=' Disable Sleep - TESTING' Margin='5'/>
+    <CheckBox Name='cbPowerSettings' Content=' Disable Sleep on AC' Margin='5'/>
     <StackPanel Orientation='Horizontal' HorizontalAlignment='Right' Margin='0 15 0 0'>
       <Button Name='btnOK' Width='75' Margin='5' IsDefault='True'>Proceed</Button>
       <Button Width='75' Margin='5' IsCancel='True'>Cancel</Button>
