@@ -217,7 +217,6 @@ $messageHeader | Out-File -FilePath $output -Encoding utf8 -Append
 Write-Host $messageDetails
 $messageDetails | Out-File -FilePath $output -Encoding utf8 -Append
 Write-Host $messageTasks
-" " | out-File -FilePath $output -Encoding utf8 -Append
 "Task Execution Logs:" | Out-File -FilePath $output -Encoding utf8 -Append
 " " | out-File -FilePath $output -Encoding utf8 -Append
 
