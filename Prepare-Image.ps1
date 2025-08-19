@@ -210,7 +210,7 @@ $messageTasks = @"
 "@
 
 $date = Get-Date
-"Execution Date & Time: $date" | Out-File -FilePath $output -Encoding utf8
+" Execution Date & Time: $date" | Out-File -FilePath $output -Encoding utf8
 
 Write-Host $messageHeader -ForegroundColor Cyan
 $messageHeader | Out-File -FilePath $output -Encoding utf8 -Append
