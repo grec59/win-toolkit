@@ -266,7 +266,7 @@ $btnOK.Add_Click({
 
 $win.Topmost = $true
 $win.Activate()
-$win.ShowDialog() | Out-Null
+$null = $win.ShowDialog()
 $sel = $win.Tag
 
 Clear-Host
