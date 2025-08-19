@@ -34,10 +34,9 @@ Choose 'Proceed' when satisfied with task selection. The script will execute aut
 
 ## Known Issues
 
-1. Script execution logging is broken and under active development
-2. Task selection GUI may not appear in the foreground
-3. UEFI updates may fail on certain hardware models
-4. Dell system updates may require approval to begin installation when using EDR or Application Whitelisting software
+1. Task selection GUI may not appear in the foreground
+2. UEFI updates may fail on certain hardware models
+3. Dell system updates may require approval to begin installation when using EDR or Application Whitelisting software
 
 ## Notes
    
