@@ -119,7 +119,8 @@ function Run-DellUpdates {
 function Disable-Sleep {
 
 # --- Power settings tuning ---
-Write-Host "Disabling Sleep and Lid Closure action When Plugged In..." -ForegroundColor Cyan
+Write-Host "D
+isabling Sleep and Lid Closure action When Plugged In..." -ForegroundColor Cyan
 Start-Sleep 2
 powercfg /change standby-timeout-ac 0
 powercfg -setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
@@ -150,6 +151,15 @@ New-Item -Path (Split-Path $output) -ItemType Directory -Force -ErrorAction Sile
 return $output
 
 }
+
+function Get-Network {
+    Get-NetAdapter -Physical | Where-Object Status -eq 'Up' | ForEach-Object {
+        $ip = (Get-NetIPAddress -InterfaceIndex $_.ifIndex -AddressFamily IPv4).IPAddress
+        "$($_.Name): $($ip -join ', ')"
+    }
+}
+
+$network = Get-Network
 
 # --- Script Logic ---
 
@@ -197,6 +207,7 @@ $messageDetails = @"
  CPU: $cpu
  Memory: $ram GB
  Boot Volume Free Space: $bootVolume GB
+ $network
 
 "@
 
