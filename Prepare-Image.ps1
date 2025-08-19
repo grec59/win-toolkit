@@ -96,7 +96,7 @@ function Execute-Actions {
             "SUCCESS: $($action.Name)" | Out-File -FilePath $output -Encoding utf8 -Append
         } catch {
             Write-Host "FAIL: $($action.Name) $($_.Exception.Message)" -ForegroundColor Red
-            "FAIL: $($action.Name)" | Out-File -FilePath $output -Encoding utf8 -Append
+            "FAIL: $($action.Name) $($_.Exception.Message)" | Out-File -FilePath $output -Encoding utf8 -Append
         }
         Start-Sleep -Seconds 2
     }
