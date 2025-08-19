@@ -61,7 +61,7 @@ function Invoke-GroupPolicy {
         Write-Host "Running Policy Update..." -ForegroundColor Cyan
         gpupdate /target:computer | out-null
         Start-Sleep -Seconds 5
-        Write-Host "SUCCESS: Computer Policy update has completed successfully." -ForegroundColor Green
+        Write-Host "SUCCESS: Computer Policy update has completed." -ForegroundColor Green
         "Computer Policy update was successful. Check Event Viewer for additional details." | Out-File -FilePath $output -Encoding utf8 -Append
 }
     catch {
@@ -121,7 +121,7 @@ Write-Host "Disabling Sleep and Lid Closure action When Plugged In..." -Foregrou
 Start-Sleep 2
 powercfg /change standby-timeout-ac 0
 powercfg -setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
-Write-Host "Sleep and Lid Closure action When Plugged In was successfully disabled." -ForegroundColor Green
+Write-Host "SUCCESS: Sleep and Lid Closure action When Plugged In was disabled." -ForegroundColor Green
 "Sleep and Lid Closure action When Plugged In has been disabled." | Out-File -FilePath $output -Encoding utf8 -Append
 Start-Sleep 2
 }
@@ -217,6 +217,9 @@ $messageHeader | Out-File -FilePath $output -Encoding utf8 -Append
 Write-Host $messageDetails
 $messageDetails | Out-File -FilePath $output -Encoding utf8 -Append
 Write-Host $messageTasks
+" " | out-File -FilePath $output -Encoding utf8 -Append
+"Task Execution Logs:" | Out-File -FilePath $output -Encoding utf8 -Append
+" " | out-File -FilePath $output -Encoding utf8 -Append
 
 # --- Confirmation ---
 
@@ -292,4 +295,5 @@ if ($sel.PowerConfig) {
 
 "Script execution complete." | Out-File -FilePath $output -Encoding utf8 -Append
 Write-Host "Script execution complete. See $output" -ForegroundColor Cyan
+Write-Host "See $output" -ForegroundColor Cyan
 Start-Sleep 3
