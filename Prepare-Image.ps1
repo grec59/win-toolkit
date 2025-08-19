@@ -292,7 +292,8 @@ if ($sel.PowerConfig) {
     Disable-Sleep
 }
 
+" " | Out-File -FilePath $output -Encoding utf8 -Append
 "Script execution complete." | Out-File -FilePath $output -Encoding utf8 -Append
 Write-Host "Script execution complete. See:"
-Write-Host "$output" -Foregroundcolor Grey
+Write-Host "$output" -Foregroundcolor Gray
 Start-Sleep 2
