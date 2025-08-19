@@ -62,7 +62,7 @@ function Invoke-GroupPolicy {
         gpupdate /target:computer | out-null
         Start-Sleep -Seconds 5
         Write-Host "SUCCESS: Computer Policy update has completed." -ForegroundColor Green
-        "SUCCESS: Computer Policy update was successful. Check Event Viewer for details." | Out-File -FilePath $output -Encoding utf8 -Append
+        "SUCCESS: Computer Policy update has completed. Check Event Viewer for details." | Out-File -FilePath $output -Encoding utf8 -Append
 }
     catch {
         Write-Host "FAIL: Failed to update Computer Policy. Check Event Viewer for details. " -ForegroundColor Yellow
