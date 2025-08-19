@@ -57,9 +57,11 @@ function Invoke-GroupPolicy {
         gpupdate /target:computer | out-null
         Start-Sleep -Seconds 5
         Write-Host "SUCCESS: Computer Policy update has completed successfully." -ForegroundColor Green
+        "Computer Policy update was succesful. Check Event Viewer for additional details." | Out-File -FilePath $output -Encoding utf8 -Append
 }
     catch {
-        Write-Host "FAIL: Failed to update Computer Policy: $($_.Exception.Message)" -ForegroundColor Yellow  
+        Write-Host "FAIL: Failed to update Computer Policy: $($_.Exception.Message)" -ForegroundColor Yellow
+        "Computer Policy update has failed. Check Event Viewer for additional details." | Out-File -FilePath $output -Encoding utf8 -Append
     }
 }
 
@@ -98,9 +100,11 @@ function Run-DellUpdates {
     if (Test-Path $path) {
         Start-Sleep -Seconds 3
         Write-Host "Dell Command CLI application detected, starting updates..."
+         "Dell Command CLI application detected, starting updates..." | Out-File -FilePath $output -Encoding utf8 -Append
         & "$path" /applyUpdates -autoSuspendBitLocker=enable -forceupdate=enable -outputLog='C:\command.log'
     } else {
         Write-Host "Dell Command application not detected, skipping updates..."
+         "Dell Command CLI application not detected, skipping updates..." | Out-File -FilePath $output -Encoding utf8 -Append
     }
 }
 
@@ -108,11 +112,14 @@ function Disable-Sleep {
 
 # --- Power settings tuning ---
 Write-Host "Disabling Sleep and Lid Closure action When Plugged In..."
-# Start-Sleep 2
-#powercfg /change standby-timeout-ac 0
-#powercfg -setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
-# Write-Host "Sleep and Lid Closure action When Plugged In has been disabled."
-"Sleep and Lid Closure action When Plugged In has been disabled. Check system power settings for additonal details." | Out-File -FilePath $output -Encoding utf8 -Append
+"Disabling Sleep and Lid Closure action When Plugged In..." | Out-File -FilePath $output -Encoding utf8 -Append
+Start-Sleep 2
+powercfg /change standby-timeout-ac 0
+"powercfg /change standby-timeout-ac 0" | Out-File -FilePath $output -Encoding utf8 -Append
+powercfg -setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
+"powercfg -setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0" | Out-File -FilePath $output -Encoding utf8 -Append
+Write-Host "Sleep and Lid Closure action When Plugged In has been disabled."
+"Sleep and Lid Closure action When Plugged In has been disabled." | Out-File -FilePath $output -Encoding utf8 -Append
 }
 
 function Initialize-Log {
@@ -198,11 +205,18 @@ $messageTasks = @"
 
 "@
 
+$date = Get-Date
+"Date & Time: $date" | Out-File -FilePath $output -Encoding utf8
+"$pspath" | | Out-File -FilePath $output -Encoding utf8 -Append
+
 Write-Host $messageHeader -ForegroundColor Cyan
 $messageHeader | Out-File -FilePath $output -Encoding utf8 -Append
 Write-Host $messageDetails
 $messageDetails | Out-File -FilePath $output -Encoding utf8 -Append
 Write-Host $messageTasks
+
+$date = Get-Date
+"Date & Time: $date" | Out-File -FilePath $output -Encoding utf8 -Append
 
 # --- Confirmation ---
 
@@ -276,5 +290,6 @@ if ($sel.PowerConfig) {
     Disable-Sleep
 }
 
+"Script execution complete." | Out-File -FilePath $output -Encoding utf8 -Append
 Write-Host "Script execution complete. See $output" -ForegroundColor Cyan
 Start-Sleep 3
