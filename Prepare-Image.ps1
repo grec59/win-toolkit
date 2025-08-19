@@ -116,7 +116,7 @@ function Run-DellUpdates {
 function Disable-Sleep {
 
 # --- Power settings tuning ---
-Write-Host "Disabling Sleep and Lid Closure action When Plugged In..."
+Write-Host "Disabling Sleep and Lid Closure action When Plugged In..." -ForegroundColor Cyan
 "Disabling Sleep and Lid Closure action When Plugged In..." | Out-File -FilePath $output -Encoding utf8 -Append
 Start-Sleep 2
 powercfg /change standby-timeout-ac 0
