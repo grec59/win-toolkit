@@ -293,8 +293,19 @@ $checkBoxes = @('cbGP','cbCM','cbDell','cbUser') | ForEach-Object { $win.FindNam
 
 # --- Enable Proceed only if something selected ---
 foreach ($cb in $checkBoxes) {
-    $cb.Add_Checked({ $btnOK.IsEnabled = $checkBoxes.IsChecked -contains $true })
-    $cb.Add_Unchecked({ $btnOK.IsEnabled = $checkBoxes.IsChecked -contains $true })
+    $cb.Add_Checked({
+        $btnOK.IsEnabled = ($checkBoxes | Where-Object { $_.IsChecked }).Count -gt 0
+    })
+    $cb.Add_Unchecked({
+        $btnOK.IsEnabled = ($checkBoxes | Where-Object { $_.IsChecked }).Count -gt 0
+    })
+}
+
+function Update-ProgressUI {
+    param([int]$percent, [string]$message)
+    $pbProgress.Value = $percent
+    $lblStatus.Text = $message
+    $win.Dispatcher.Invoke([action]{}, "Render")
 }
 
 # --- Helper: Update Progress ---
@@ -369,27 +380,27 @@ $win.ShowDialog() | Out-Null
 
 Clear-Host
 
-# --- Execute tasks ---
+# # --- Execute tasks ---
 
-if ($sel.CreateUser) {
-    Create-User
-}
+# if ($sel.CreateUser) {
+#     Create-User
+# }
 
-if ($sel.GroupPolicy) {
-    Invoke-PolicyUpdate
-}
+# if ($sel.GroupPolicy) {
+#     Invoke-PolicyUpdate
+# }
 
-if ($sel.ConfigMgr) {
-    Invoke-Actions
-}
+# if ($sel.ConfigMgr) {
+#     Invoke-Actions
+# }
 
-if ($sel.DellUpdates) {
-    Invoke-Updates
-}
+# if ($sel.DellUpdates) {
+#     Invoke-Updates
+# }
 
-if ($sel.PowerConfig) {
-    Disable-Sleep
-}
+# if ($sel.PowerConfig) {
+#     Disable-Sleep
+# }
 
 " " | Out-File -FilePath $output -Encoding utf8 -Append
 "Script execution complete." | Out-File -FilePath $output -Encoding utf8 -Append
