@@ -308,14 +308,6 @@ function Update-ProgressUI {
     $win.Dispatcher.Invoke([action]{}, "Render")
 }
 
-# --- Helper: Update Progress ---
-function Update-ProgressUI {
-    param([int]$percent, [string]$message)
-    $pbProgress.Value = $percent
-    $lblStatus.Text = $message
-    [System.Windows.Forms.Application]::DoEvents() | Out-Null
-}
-
 # --- Button Logic ---
 $btnOK.Add_Click({
     $actions = @{
@@ -363,9 +355,8 @@ $btnOK.Add_Click({
             }
         }
         catch {
-            Write-Log "ERROR with task [$($task.Key)]: $_"
-            $summary += "❌ $($task.Key) failed. Check log."
-        }
+          "ERROR with task [$($task.Key)]: $_" | Out-File -FilePath $output -Encoding utf8 -Append
+          $summary += "❌ $($task.Key) failed. Check log."
     }
 
     Update-ProgressUI 100 'All selected actions completed!'
