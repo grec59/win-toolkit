@@ -327,26 +327,26 @@ $btnOK.Add_Click({
             switch ($task.Key) {
                 'GroupPolicy' {
                     Update-ProgressUI $percent 'Updating Group Policy...'
-                    Start-Sleep -Seconds 2   # placeholder
-                    Write-Log "Group Policy updated successfully."
+                    Invoke-PolicyUpdate   # placeholder
+                    #Write-Log "Group Policy updated successfully."
                     $summary += "✔ Group Policy updated."
                 }
                 'ConfigMgr' {
                     Update-ProgressUI $percent 'Running ConfigMgr Tasks...'
-                    Start-Sleep -Seconds 2   # placeholder
-                    Write-Log "ConfigMgr tasks completed successfully."
+                    Invoke-Actions   # placeholder
+                    #Write-Log "ConfigMgr tasks completed successfully."
                     $summary += "✔ ConfigMgr tasks completed."
                 }
                 'DellUpdates' {
                     Update-ProgressUI $percent 'Installing Dell Updates...'
-                    Start-Sleep -Seconds 2   # placeholder
-                    Write-Log "Dell updates installed successfully."
+                    Invoke-Updates   # placeholder
+                    #Write-Log "Dell updates installed successfully."
                     $summary += "✔ Dell updates installed."
                 }
                 'CreateUser' {
                     Update-ProgressUI $percent 'Creating Local User...'
-                    Start-Sleep -Seconds 2   # placeholder
-                    Write-Log "Local user account created successfully."
+                    Create-User   # placeholder
+                    #Write-Log "Local user account created successfully."
                     $summary += "✔ Local user created."
                 }
             }
