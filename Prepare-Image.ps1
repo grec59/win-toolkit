@@ -58,7 +58,7 @@ function Create-User {
     }
 }
 
-function Invoke-PolicyUpdate {
+function Invoke-GroupPolicy {
     try {
         Write-Host "Running Policy Update..." -ForegroundColor Cyan
         gpupdate /target:computer | out-null
@@ -73,7 +73,7 @@ function Invoke-PolicyUpdate {
     }
 }
 
-function Invoke-Actions {
+function Execute-Actions {
     Write-Host "Running Configuration Actions..." -ForegroundColor Cyan
     $SCCMActions = @(
         [PSCustomObject]@{ Guid = "{00000000-0000-0000-0000-000000000021}"; Name = "Machine policy retrieval Cycle" },
@@ -102,7 +102,7 @@ function Invoke-Actions {
     }
 }
 
-function Invoke-Updates {
+function Run-DellUpdates {
     Write-Host "Running System Updates..." -ForegroundColor Cyan
     $path = 'C:\Program Files\Dell\CommandUpdate\dcu-cli.exe'
     if (Test-Path $path) {
@@ -118,17 +118,18 @@ function Invoke-Updates {
 
 function Disable-Sleep {
 
-    # --- Power settings tuning ---
-    Write-Host "Disabling Sleep and Lid Closure action When Plugged In..." -ForegroundColor Cyan
-    Start-Sleep 2
-    powercfg /change standby-timeout-ac 0
-    powercfg -setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
-    Write-Host "SUCCESS: Sleep and Lid Closure action When Plugged In was disabled." -ForegroundColor Green
-    "SUCCESS: Sleep and Lid Closure action When Plugged In has been disabled." | Out-File -FilePath $output -Encoding utf8 -Append
-    Start-Sleep 2
-    }
+# --- Power settings tuning ---
+Write-Host "Disabling Sleep and Lid Closure action When Plugged In..." -ForegroundColor Cyan
+Start-Sleep 2
+powercfg /change standby-timeout-ac 0
+powercfg -setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
+Write-Host "SUCCESS: Sleep and Lid Closure action When Plugged In was disabled." -ForegroundColor Green
+"SUCCESS: Sleep and Lid Closure action When Plugged In has been disabled." | Out-File -FilePath $output -Encoding utf8 -Append
+Start-Sleep 2
+}
 
 function Initialize-Log {
+#    Write-Host "Initializing Logging..." -ForegroundColor Cyan
     
 # --- Prefer OneDrive\Desktop if available, otherwise use local Desktop ---
 
@@ -144,9 +145,20 @@ function Initialize-Log {
 
 New-Item -Path (Split-Path $output) -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
 
+#Write-Host "Output will be saved to: $output"
+
 return $output
 
 }
+
+function Get-Network {
+    Get-NetAdapter -Physical | Where-Object Status -eq 'Up' | ForEach-Object {
+        $ip = (Get-NetIPAddress -InterfaceIndex $_.ifIndex -AddressFamily IPv4).IPAddress
+        "$($_.Name): $($ip -join ', ')"
+    }
+}
+
+$network = Get-Network
 
 # --- Script Logic ---
 
@@ -182,7 +194,7 @@ $bootVolume = [math]::Round((Get-CimInstance Win32_LogicalDisk -Filter "DeviceID
 $messageHeader = @"
 
  ==========================================
- Welcome to the Quick Utilities Script v1.0
+ Welcome to the Quick Utilities Script
  ==========================================
 
 "@
@@ -194,6 +206,7 @@ $messageDetails = @"
  CPU: $cpu
  Memory: $ram GB
  Boot Volume Free Space: $bootVolume GB
+ $network
 
 "@
 
@@ -221,177 +234,75 @@ Write-Host $messageTasks
 
 # --- Confirmation ---
 
-do {
-    $i = Read-Host " Press Y to continue or N to quit"
-} while ($i -notmatch '^[YyNn]$')
-
+while (($i = Read-Host " Press Y to continue or N to quit") -notmatch '^[YyNn]$') {}
 if ($i -notmatch '^[Yy]$') { exit }
 
 # --- Build GUI ---
+
+Add-Type -AssemblyName PresentationFramework
+
 $xaml = @"
-<Window xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'
-        Title='System Maintenance Tool'
-        Height='400' Width='450'
-        WindowStartupLocation='CenterScreen'
-        ResizeMode='NoResize'>
-  <Grid Margin='15'>
-    <Grid.RowDefinitions>
-      <RowDefinition Height='Auto'/>
-      <RowDefinition Height='*'/>
-      <RowDefinition Height='Auto'/>
-    </Grid.RowDefinitions>
-
-    <!-- Header -->
-    <StackPanel Grid.Row='0' Margin='0 0 0 15'>
-      <TextBlock Text='System Maintenance Actions' 
-                 FontWeight='Bold' FontSize='16' 
-                 Foreground='DarkBlue'
-                 HorizontalAlignment='Center'/>
-      <TextBlock Text='Select one or more actions to perform:' 
-                 FontStyle='Italic'
-                 HorizontalAlignment='Center' Margin='0 5 0 0'/>
+<Window xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' Title='Select Actions' Height='250' Width='350' WindowStartupLocation='CenterScreen'>
+  <StackPanel Margin='10'>
+    <TextBlock FontWeight='Bold' Margin='0 0 0 10'>Choose the actions you want to perform:</TextBlock>
+    <CheckBox Name='cbGP' Content=' Update Group Policy' Margin='5'/>
+    <CheckBox Name='cbCM' Content=' Configuration Manager Tasks' Margin='5'/>
+    <CheckBox Name='cbDell' Content=' Install Dell System Updates' Margin='5'/>
+    <CheckBox Name='cbUser' Content=' Create a Local User Account' Margin='5'/>
+    <CheckBox Name='cbPowerSettings' Content=' Disable Sleep on AC' Margin='5'/>
+    <StackPanel Orientation='Horizontal' HorizontalAlignment='Right' Margin='0 15 0 0'>
+      <Button Name='btnOK' Width='75' Margin='5' IsDefault='True'>Proceed</Button>
+      <Button Width='75' Margin='5' IsCancel='True'>Cancel</Button>
     </StackPanel>
-
-    <!-- Options -->
-    <StackPanel Grid.Row='1'>
-      <GroupBox Header='Available Actions' Margin='0 0 0 10'>
-        <StackPanel Margin='10'>
-          <CheckBox Name='cbGP' Content=' Update Group Policy' Margin='3'/>
-          <CheckBox Name='cbCM' Content=' Run Configuration Manager Tasks' Margin='3'/>
-          <CheckBox Name='cbDell' Content=' Install Dell System Updates' Margin='3'/>
-          <CheckBox Name='cbUser' Content=' Create Local User Account' Margin='3'/>
-        </StackPanel>
-      </GroupBox>
-
-      <!-- Progress Area -->
-      <GroupBox Header='Execution Progress'>
-        <StackPanel Margin='10'>
-          <ProgressBar Name='pbProgress' Height='20' Minimum='0' Maximum='100'/>
-          <TextBlock Name='lblStatus' Text='Waiting for user input...' Margin='0 5 0 0'/>
-        </StackPanel>
-      </GroupBox>
-    </StackPanel>
-
-    <!-- Buttons -->
-    <StackPanel Grid.Row='2' Orientation='Horizontal' HorizontalAlignment='Right' Margin='0 15 0 0'>
-      <Button Name='btnOK' Width='85' Margin='5' IsDefault='True' IsEnabled='False'>Proceed</Button>
-      <Button Width='85' Margin='5' IsCancel='True'>Cancel</Button>
-    </StackPanel>
-  </Grid>
+  </StackPanel>
 </Window>
 "@
 
-# --- Load GUI ---
 $reader = (New-Object System.Xml.XmlNodeReader ([xml]$xaml))
 $win = [Windows.Markup.XamlReader]::Load($reader)
 
-# --- Controls ---
-$btnOK      = $win.FindName('btnOK')
-$pbProgress = $win.FindName('pbProgress')
-$lblStatus  = $win.FindName('lblStatus')
-$checkBoxes = @('cbGP','cbCM','cbDell','cbUser') | ForEach-Object { $win.FindName($_) }
+# --- Capture GUI selections ---
 
-# --- Enable Proceed only if something selected ---
-foreach ($cb in $checkBoxes) {
-    $cb.Add_Checked({
-        $btnOK.IsEnabled = ($checkBoxes | Where-Object { $_.IsChecked }).Count -gt 0
-    })
-    $cb.Add_Unchecked({
-        $btnOK.IsEnabled = ($checkBoxes | Where-Object { $_.IsChecked }).Count -gt 0
-    })
-}
-
-function Update-ProgressUI {
-    param([int]$percent, [string]$message)
-    $pbProgress.Value = $percent
-    $lblStatus.Text = $message
-    $win.Dispatcher.Invoke([action]{}, "Render")
-}
-
-# --- Button Logic ---
+$btnOK = $win.FindName('btnOK')
 $btnOK.Add_Click({
-    $actions = @{
-        GroupPolicy  = $win.FindName('cbGP').IsChecked
-        ConfigMgr    = $win.FindName('cbCM').IsChecked
-        DellUpdates  = $win.FindName('cbDell').IsChecked
-        CreateUser   = $win.FindName('cbUser').IsChecked
+    $win.Tag = @{
+        GroupPolicy = $win.FindName('cbGP').IsChecked
+        ConfigMgr  = $win.FindName('cbCM').IsChecked
+        DellUpdates = $win.FindName('cbDell').IsChecked
+        CreateUser = $win.FindName('cbUser').IsChecked
+        PowerConfig = $win.FindName('cbPowerSettings').IsChecked
     }
-
-    $step = 0
-    $tasks = $actions.GetEnumerator() | Where-Object { $_.Value -eq $true }
-    $count = $tasks.Count
-    $summary = @()
-
-    foreach ($task in $tasks) {
-        $step++
-        $percent = [math]::Round(($step / $count) * 100)
-
-        try {
-            switch ($task.Key) {
-                'GroupPolicy' {
-                    Update-ProgressUI $percent 'Updating Group Policy...'
-                    Invoke-PolicyUpdate   # placeholder
-                    #Write-Log "Group Policy updated successfully."
-                    $summary += "✔ Group Policy updated."
-                }
-                'ConfigMgr' {
-                    Update-ProgressUI $percent 'Running ConfigMgr Tasks...'
-                    Invoke-Actions   # placeholder
-                    #Write-Log "ConfigMgr tasks completed successfully."
-                    $summary += "✔ ConfigMgr tasks completed."
-                }
-                'DellUpdates' {
-                    Update-ProgressUI $percent 'Installing Dell Updates...'
-                    Invoke-Updates   # placeholder
-                    #Write-Log "Dell updates installed successfully."
-                    $summary += "✔ Dell updates installed."
-                }
-                'CreateUser' {
-                    Update-ProgressUI $percent 'Creating Local User...'
-                    Create-User   # placeholder
-                    #Write-Log "Local user account created successfully."
-                    $summary += "✔ Local user created."
-                }
-            }
-        }
-        catch {
-          "ERROR with task [$($task.Key)]: $_" | Out-File -FilePath $output -Encoding utf8 -Append
-          $summary += "❌ $($task.Key) failed. Check log."
-    }
-
-    Update-ProgressUI 100 'All selected actions completed!'
-    [System.Windows.MessageBox]::Show(($summary -join "`n"),"Execution Summary",
-        [System.Windows.MessageBoxButton]::OK,[System.Windows.MessageBoxImage]::Information) | Out-Null
+    $win.Close()
 })
 
-# --- Show Window ---
 $win.Topmost = $true
 $win.Activate()
-$win.ShowDialog() | Out-Null
+$win.ShowDialog() | out-null
+$sel = $win.Tag
 
 Clear-Host
 
-# # --- Execute tasks ---
+# --- Execute tasks ---
 
-# if ($sel.CreateUser) {
-#     Create-User
-# }
+if ($sel.CreateUser) {
+    Create-User
+}
 
-# if ($sel.GroupPolicy) {
-#     Invoke-PolicyUpdate
-# }
+if ($sel.GroupPolicy) {
+    Invoke-GroupPolicy
+}
 
-# if ($sel.ConfigMgr) {
-#     Invoke-Actions
-# }
+if ($sel.ConfigMgr) {
+    Execute-Actions
+}
 
-# if ($sel.DellUpdates) {
-#     Invoke-Updates
-# }
+if ($sel.DellUpdates) {
+    Run-DellUpdates
+}
 
-# if ($sel.PowerConfig) {
-#     Disable-Sleep
-# }
+if ($sel.PowerConfig) {
+    Disable-Sleep
+}
 
 " " | Out-File -FilePath $output -Encoding utf8 -Append
 "Script execution complete." | Out-File -FilePath $output -Encoding utf8 -Append
