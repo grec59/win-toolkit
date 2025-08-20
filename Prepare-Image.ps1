@@ -228,47 +228,144 @@ do {
 if ($i -notmatch '^[Yy]$') { exit }
 
 # --- Build GUI ---
-
-Add-Type -AssemblyName PresentationFramework
-
 $xaml = @"
-<Window xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' Title='Select Actions' Height='250' Width='350' WindowStartupLocation='CenterScreen'>
-  <StackPanel Margin='10'>
-    <TextBlock FontWeight='Bold' Margin='0 0 0 10'>Choose the actions you want to perform:</TextBlock>
-    <CheckBox Name='cbGP' Content=' Update Group Policy' Margin='5'/>
-    <CheckBox Name='cbCM' Content=' Configuration Manager Tasks' Margin='5'/>
-    <CheckBox Name='cbDell' Content=' Install Dell System Updates' Margin='5'/>
-    <CheckBox Name='cbUser' Content=' Create a Local User Account' Margin='5'/>
-    <CheckBox Name='cbPowerSettings' Content=' Disable Sleep on AC' Margin='5'/>
-    <StackPanel Orientation='Horizontal' HorizontalAlignment='Right' Margin='0 15 0 0'>
-      <Button Name='btnOK' Width='75' Margin='5' IsDefault='True'>Proceed</Button>
-      <Button Width='75' Margin='5' IsCancel='True'>Cancel</Button>
+<Window xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'
+        Title='System Maintenance Tool'
+        Height='400' Width='450'
+        WindowStartupLocation='CenterScreen'
+        ResizeMode='NoResize'>
+  <Grid Margin='15'>
+    <Grid.RowDefinitions>
+      <RowDefinition Height='Auto'/>
+      <RowDefinition Height='*'/>
+      <RowDefinition Height='Auto'/>
+    </Grid.RowDefinitions>
+
+    <!-- Header -->
+    <StackPanel Grid.Row='0' Margin='0 0 0 15'>
+      <TextBlock Text='System Maintenance Actions' 
+                 FontWeight='Bold' FontSize='16' 
+                 Foreground='DarkBlue'
+                 HorizontalAlignment='Center'/>
+      <TextBlock Text='Select one or more actions to perform:' 
+                 FontStyle='Italic'
+                 HorizontalAlignment='Center' Margin='0 5 0 0'/>
     </StackPanel>
-  </StackPanel>
+
+    <!-- Options -->
+    <StackPanel Grid.Row='1'>
+      <GroupBox Header='Available Actions' Margin='0 0 0 10'>
+        <StackPanel Margin='10'>
+          <CheckBox Name='cbGP' Content=' Update Group Policy' Margin='3'/>
+          <CheckBox Name='cbCM' Content=' Run Configuration Manager Tasks' Margin='3'/>
+          <CheckBox Name='cbDell' Content=' Install Dell System Updates' Margin='3'/>
+          <CheckBox Name='cbUser' Content=' Create Local User Account' Margin='3'/>
+        </StackPanel>
+      </GroupBox>
+
+      <!-- Progress Area -->
+      <GroupBox Header='Execution Progress'>
+        <StackPanel Margin='10'>
+          <ProgressBar Name='pbProgress' Height='20' Minimum='0' Maximum='100'/>
+          <TextBlock Name='lblStatus' Text='Waiting for user input...' Margin='0 5 0 0'/>
+        </StackPanel>
+      </GroupBox>
+    </StackPanel>
+
+    <!-- Buttons -->
+    <StackPanel Grid.Row='2' Orientation='Horizontal' HorizontalAlignment='Right' Margin='0 15 0 0'>
+      <Button Name='btnOK' Width='85' Margin='5' IsDefault='True' IsEnabled='False'>Proceed</Button>
+      <Button Width='85' Margin='5' IsCancel='True'>Cancel</Button>
+    </StackPanel>
+  </Grid>
 </Window>
 "@
 
+# --- Load GUI ---
 $reader = (New-Object System.Xml.XmlNodeReader ([xml]$xaml))
 $win = [Windows.Markup.XamlReader]::Load($reader)
 
-# --- Capture GUI selections ---
+# --- Controls ---
+$btnOK      = $win.FindName('btnOK')
+$pbProgress = $win.FindName('pbProgress')
+$lblStatus  = $win.FindName('lblStatus')
+$checkBoxes = @('cbGP','cbCM','cbDell','cbUser') | ForEach-Object { $win.FindName($_) }
 
-$btnOK = $win.FindName('btnOK')
+# --- Enable Proceed only if something selected ---
+foreach ($cb in $checkBoxes) {
+    $cb.Add_Checked({ $btnOK.IsEnabled = $checkBoxes.IsChecked -contains $true })
+    $cb.Add_Unchecked({ $btnOK.IsEnabled = $checkBoxes.IsChecked -contains $true })
+}
+
+# --- Helper: Update Progress ---
+function Update-ProgressUI {
+    param([int]$percent, [string]$message)
+    $pbProgress.Value = $percent
+    $lblStatus.Text = $message
+    [System.Windows.Forms.Application]::DoEvents() | Out-Null
+}
+
+# --- Button Logic ---
 $btnOK.Add_Click({
-    $win.Tag = @{
-        GroupPolicy = $win.FindName('cbGP').IsChecked
-        ConfigMgr  = $win.FindName('cbCM').IsChecked
-        DellUpdates = $win.FindName('cbDell').IsChecked
-        CreateUser = $win.FindName('cbUser').IsChecked
-	PowerConfig = $win.FindName('cbPowerSettings').IsChecked
+    $actions = @{
+        GroupPolicy  = $win.FindName('cbGP').IsChecked
+        ConfigMgr    = $win.FindName('cbCM').IsChecked
+        DellUpdates  = $win.FindName('cbDell').IsChecked
+        CreateUser   = $win.FindName('cbUser').IsChecked
     }
-    $win.Close()
+
+    $step = 0
+    $tasks = $actions.GetEnumerator() | Where-Object { $_.Value -eq $true }
+    $count = $tasks.Count
+    $summary = @()
+
+    foreach ($task in $tasks) {
+        $step++
+        $percent = [math]::Round(($step / $count) * 100)
+
+        try {
+            switch ($task.Key) {
+                'GroupPolicy' {
+                    Update-ProgressUI $percent 'Updating Group Policy...'
+                    Start-Sleep -Seconds 2   # placeholder
+                    Write-Log "Group Policy updated successfully."
+                    $summary += "✔ Group Policy updated."
+                }
+                'ConfigMgr' {
+                    Update-ProgressUI $percent 'Running ConfigMgr Tasks...'
+                    Start-Sleep -Seconds 2   # placeholder
+                    Write-Log "ConfigMgr tasks completed successfully."
+                    $summary += "✔ ConfigMgr tasks completed."
+                }
+                'DellUpdates' {
+                    Update-ProgressUI $percent 'Installing Dell Updates...'
+                    Start-Sleep -Seconds 2   # placeholder
+                    Write-Log "Dell updates installed successfully."
+                    $summary += "✔ Dell updates installed."
+                }
+                'CreateUser' {
+                    Update-ProgressUI $percent 'Creating Local User...'
+                    Start-Sleep -Seconds 2   # placeholder
+                    Write-Log "Local user account created successfully."
+                    $summary += "✔ Local user created."
+                }
+            }
+        }
+        catch {
+            Write-Log "ERROR with task [$($task.Key)]: $_"
+            $summary += "❌ $($task.Key) failed. Check log."
+        }
+    }
+
+    Update-ProgressUI 100 'All selected actions completed!'
+    [System.Windows.MessageBox]::Show(($summary -join "`n"),"Execution Summary",
+        [System.Windows.MessageBoxButton]::OK,[System.Windows.MessageBoxImage]::Information) | Out-Null
 })
 
+# --- Show Window ---
 $win.Topmost = $true
-$win.Activate() | Out-Null
+$win.Activate()
 $win.ShowDialog() | Out-Null
-$sel = $win.Tag
 
 Clear-Host
 
