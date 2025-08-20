@@ -221,7 +221,10 @@ Write-Host $messageTasks
 
 # --- Confirmation ---
 
-while (($i = Read-Host " Press Y to continue or N to quit") -notmatch '^[YyNn]$') {}
+do {
+    $i = Read-Host " Press Y to continue or N to quit"
+} while ($i -notmatch '^[YyNn]$')
+
 if ($i -notmatch '^[Yy]$') { exit }
 
 # --- Build GUI ---
