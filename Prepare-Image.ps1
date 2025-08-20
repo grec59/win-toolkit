@@ -58,7 +58,7 @@ function Create-User {
     }
 }
 
-function Invoke-GroupPolicy {
+function Invoke-PolicyUpdate {
     try {
         Write-Host "Running Policy Update..." -ForegroundColor Cyan
         gpupdate /target:computer | out-null
@@ -73,7 +73,7 @@ function Invoke-GroupPolicy {
     }
 }
 
-function Execute-Actions {
+function Invoke-Actions {
     Write-Host "Running Configuration Actions..." -ForegroundColor Cyan
     $SCCMActions = @(
         [PSCustomObject]@{ Guid = "{00000000-0000-0000-0000-000000000021}"; Name = "Machine policy retrieval Cycle" },
@@ -102,7 +102,7 @@ function Execute-Actions {
     }
 }
 
-function Run-DellUpdates {
+function Invoke-Updates {
     Write-Host "Running System Updates..." -ForegroundColor Cyan
     $path = 'C:\Program Files\Dell\CommandUpdate\dcu-cli.exe'
     if (Test-Path $path) {
@@ -118,18 +118,17 @@ function Run-DellUpdates {
 
 function Disable-Sleep {
 
-# --- Power settings tuning ---
-Write-Host "Disabling Sleep and Lid Closure action When Plugged In..." -ForegroundColor Cyan
-Start-Sleep 2
-powercfg /change standby-timeout-ac 0
-powercfg -setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
-Write-Host "SUCCESS: Sleep and Lid Closure action When Plugged In was disabled." -ForegroundColor Green
-"SUCCESS: Sleep and Lid Closure action When Plugged In has been disabled." | Out-File -FilePath $output -Encoding utf8 -Append
-Start-Sleep 2
-}
+    # --- Power settings tuning ---
+    Write-Host "Disabling Sleep and Lid Closure action When Plugged In..." -ForegroundColor Cyan
+    Start-Sleep 2
+    powercfg /change standby-timeout-ac 0
+    powercfg -setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
+    Write-Host "SUCCESS: Sleep and Lid Closure action When Plugged In was disabled." -ForegroundColor Green
+    "SUCCESS: Sleep and Lid Closure action When Plugged In has been disabled." | Out-File -FilePath $output -Encoding utf8 -Append
+    Start-Sleep 2
+    }
 
 function Initialize-Log {
-#    Write-Host "Initializing Logging..." -ForegroundColor Cyan
     
 # --- Prefer OneDrive\Desktop if available, otherwise use local Desktop ---
 
@@ -145,20 +144,9 @@ function Initialize-Log {
 
 New-Item -Path (Split-Path $output) -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
 
-#Write-Host "Output will be saved to: $output"
-
 return $output
 
 }
-
-function Get-Network {
-    Get-NetAdapter -Physical | Where-Object Status -eq 'Up' | ForEach-Object {
-        $ip = (Get-NetIPAddress -InterfaceIndex $_.ifIndex -AddressFamily IPv4).IPAddress
-        "$($_.Name): $($ip -join ', ')"
-    }
-}
-
-$network = Get-Network
 
 # --- Script Logic ---
 
@@ -194,7 +182,7 @@ $bootVolume = [math]::Round((Get-CimInstance Win32_LogicalDisk -Filter "DeviceID
 $messageHeader = @"
 
  ==========================================
- Welcome to the Quick Utilities Script
+ Welcome to the Quick Utilities Script v1.0
  ==========================================
 
 "@
@@ -206,7 +194,6 @@ $messageDetails = @"
  CPU: $cpu
  Memory: $ram GB
  Boot Volume Free Space: $bootVolume GB
- $network
 
 "@
 
@@ -270,14 +257,14 @@ $btnOK.Add_Click({
         ConfigMgr  = $win.FindName('cbCM').IsChecked
         DellUpdates = $win.FindName('cbDell').IsChecked
         CreateUser = $win.FindName('cbUser').IsChecked
-        PowerConfig = $win.FindName('cbPowerSettings').IsChecked
+	PowerConfig = $win.FindName('cbPowerSettings').IsChecked
     }
     $win.Close()
 })
 
 $win.Topmost = $true
 $win.Activate()
-$win.ShowDialog() | out-null
+$win.ShowDialog() | Out-Null
 $sel = $win.Tag
 
 Clear-Host
@@ -289,15 +276,15 @@ if ($sel.CreateUser) {
 }
 
 if ($sel.GroupPolicy) {
-    Invoke-GroupPolicy
+    Invoke-PolicyUpdate
 }
 
 if ($sel.ConfigMgr) {
-    Execute-Actions
+    Invoke-Actions
 }
 
 if ($sel.DellUpdates) {
-    Run-DellUpdates
+    Invoke-Updates
 }
 
 if ($sel.PowerConfig) {
