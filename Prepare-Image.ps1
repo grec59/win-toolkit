@@ -117,7 +117,6 @@ function Run-DellUpdates {
 }
 
 function Disable-Sleep {
-
 # --- Power settings tuning ---
 Write-Host "Disabling Sleep and Lid Closure action When Plugged In..." -ForegroundColor Cyan
 Start-Sleep 2
@@ -129,8 +128,6 @@ Start-Sleep 2
 }
 
 function Initialize-Log {
-#    Write-Host "Initializing Logging..." -ForegroundColor Cyan
-    
 # --- Prefer OneDrive\Desktop if available, otherwise use local Desktop ---
 
     $desktop = [Environment]::GetFolderPath("Desktop")
@@ -145,20 +142,18 @@ function Initialize-Log {
 
 New-Item -Path (Split-Path $output) -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
 
-#Write-Host "Output will be saved to: $output"
-
 return $output
 
 }
 
-function Get-Network {
-    Get-NetAdapter -Physical | Where-Object Status -eq 'Up' | ForEach-Object {
-        $ip = (Get-NetIPAddress -InterfaceIndex $_.ifIndex -AddressFamily IPv4).IPAddress
-        "$($_.Name): $($ip -join ', ')"
-    }
-}
+# function Get-Network {
+#     Get-NetAdapter -Physical | Where-Object Status -eq 'Up' | ForEach-Object {
+#         $ip = (Get-NetIPAddress -InterfaceIndex $_.ifIndex -AddressFamily IPv4).IPAddress
+#         "$($_.Name): $($ip -join ', ')"
+#     }
+# }
 
-$network = Get-Network
+# $network = Get-Network
 
 # --- Script Logic ---
 
@@ -194,7 +189,7 @@ $bootVolume = [math]::Round((Get-CimInstance Win32_LogicalDisk -Filter "DeviceID
 $messageHeader = @"
 
  ==========================================
- Welcome to the Quick Utilities Script
+ Welcome to the Quick Utilities Script v0.9
  ==========================================
 
 "@
@@ -206,7 +201,6 @@ $messageDetails = @"
  CPU: $cpu
  Memory: $ram GB
  Boot Volume Free Space: $bootVolume GB
- $network
 
 "@
 
