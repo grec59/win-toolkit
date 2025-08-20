@@ -266,7 +266,7 @@ $btnOK.Add_Click({
 })
 
 $win.Topmost = $true
-$win.Activate()
+$win.Activate() | Out-Null
 $win.ShowDialog() | Out-Null
 $sel = $win.Tag
 
