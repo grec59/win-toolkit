@@ -270,7 +270,7 @@ $btnOK.Add_Click({
 })
 
 $win.Topmost = $true
-$win.Activate()
+$win.Activate() | out-null
 $win.ShowDialog() | out-null
 $sel = $win.Tag
 
