@@ -26,6 +26,47 @@
 
 # --- Function Definitions ---
 
+function Initialize-Log {
+# --- Prefer OneDrive\Desktop if available, otherwise use local Desktop ---
+
+    $desktop = [Environment]::GetFolderPath("Desktop")
+    $output = if ($env:OneDrive -and (Test-Path $env:OneDrive)) {
+    Join-Path $env:OneDrive "Desktop\results.txt"
+    } 
+    else {
+    Join-Path $desktop "results.txt"
+    }
+
+# --- Ensure directory exists ---
+
+New-Item -Path (Split-Path $output) -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
+
+return $output
+
+}
+
+function Write-Log {
+param(
+[string]$Message,
+[ValidateSet("INFO","SUCCESS","WARN","FAIL")]
+[string]$Level = "INFO"
+)
+$entry = [PSCustomObject]@{
+Timestamp = (Get-Date).ToString("o")
+Level = $Level
+Message = $Message
+}
+$entry | ConvertTo-Json -Compress | Out-File -FilePath $Global:LogFile -Append -Encoding utf8
+Write-Host "[$Level] $Message" -ForegroundColor (switch ($Level) {
+"SUCCESS" { "Green" }
+"FAIL" { "Red" }
+"WARN" { "Yellow" }
+default { "Cyan" }
+})
+}
+
+$Global:LogFile = Initialize-Log
+
 function Create-User {
     param(
         [PSCredential]$Credential
@@ -127,34 +168,6 @@ Write-Host "SUCCESS: Sleep and Lid Closure action When Plugged In was disabled."
 Start-Sleep 2
 }
 
-function Initialize-Log {
-# --- Prefer OneDrive\Desktop if available, otherwise use local Desktop ---
-
-    $desktop = [Environment]::GetFolderPath("Desktop")
-    $output = if ($env:OneDrive -and (Test-Path $env:OneDrive)) {
-    Join-Path $env:OneDrive "Desktop\results.txt"
-    } 
-    else {
-    Join-Path $desktop "results.txt"
-    }
-
-# --- Ensure directory exists ---
-
-New-Item -Path (Split-Path $output) -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
-
-return $output
-
-}
-
-# function Get-Network {
-#     Get-NetAdapter -Physical | Where-Object Status -eq 'Up' | ForEach-Object {
-#         $ip = (Get-NetIPAddress -InterfaceIndex $_.ifIndex -AddressFamily IPv4).IPAddress
-#         "$($_.Name): $($ip -join ', ')"
-#     }
-# }
-
-# $network = Get-Network
-
 # --- Script Logic ---
 
 Clear-Host
@@ -167,9 +180,17 @@ $pspath = (Get-Process -Id $PID).Path
 
 # --- Ensure admin privileges ---
 
+$pspath = (Get-Process -Id $PID).Path
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    Start-Process $pspath -Verb runAs -ArgumentList '-NoExit', '-ExecutionPolicy RemoteSigned', '-Command', "& {Invoke-WebRequest 'https://agho.me/provision' -UseBasicParsing | Invoke-Expression}"
-    Stop-Process -Id $PID
+$argsList = @('-NoExit','-ExecutionPolicy','Bypass')
+if ($PSCommandPath) { $argsList += @('-File', '"' + $PSCommandPath + '"') }
+if ($Remote) { $argsList += '-Remote' }
+if ($Actions) { $argsList += @('-Actions', ($Actions -join ',')) }
+if ($Username) { $argsList += @('-Username', '"' + $Username + '"') }
+if ($Password) { $argsList += @('-Password', (ConvertFrom-SecureString $Password)) } # note: only for re-launch; secure string stays in memory
+if ($Force) { $argsList += '-Force' }
+Start-Process $pspath -Verb RunAs -ArgumentList $argsList
+Stop-Process -Id $PID
 }
 
 # --- Logging ---
@@ -189,7 +210,7 @@ $bootVolume = [math]::Round((Get-CimInstance Win32_LogicalDisk -Filter "DeviceID
 $messageHeader = @"
 
  ==========================================
- Welcome to the Quick Utilities Script v0.9
+ Welcome to the Quick Utilities Script v1.0
  ==========================================
 
 "@
