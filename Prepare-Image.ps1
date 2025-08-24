@@ -45,26 +45,6 @@ return $output
 
 }
 
-function Write-Log {
-param(
-[string]$Message,
-[ValidateSet("INFO","SUCCESS","WARN","FAIL")]
-[string]$Level = "INFO"
-)
-$entry = [PSCustomObject]@{
-Timestamp = (Get-Date).ToString("o")
-Level = $Level
-Message = $Message
-}
-$entry | ConvertTo-Json -Compress | Out-File -FilePath $Global:LogFile -Append -Encoding utf8
-Write-Host "[$Level] $Message" -ForegroundColor (switch ($Level) {
-"SUCCESS" { "Green" }
-"FAIL" { "Red" }
-"WARN" { "Yellow" }
-default { "Cyan" }
-})
-}
-
 $Global:LogFile = Initialize-Log
 
 function Create-User {
