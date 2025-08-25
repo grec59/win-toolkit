@@ -1,6 +1,3 @@
-<#
-.SYNOPSIS
-  Quick Utilities Script for System Prep and Maintenance.
 
 .DESCRIPTION
   This script executes administrative tasks on a Windows system, including:

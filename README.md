@@ -2,7 +2,7 @@
 
 ## Overview
 
-This PowerShell script provides a streamlined way to perform essential system preparation and maintenance tasks on Windows machines. An interactive GUI allows users to select which tasks to run.
+This PowerShell script provides a streamlined way to perform system preparation and maintenance tasks on Windows machines.
 
 ## Features
 
@@ -10,14 +10,17 @@ This PowerShell script provides a streamlined way to perform essential system pr
 - Initiate Configuration Manager client actions
 - Install Dell system updates
 - Create a local user account
-- Disable Sleep and Lid Close Action on AC
+- Disable sleep and lid close action on A/C
+- Remove temporary files
+- Schedule boot volume disk check on reboot
 
 ## Requirements
 
 - Must be run with administrative privileges
-- Windows OS with PowerShell 5 or newer
+- Windows OS and PowerShell 5.1 or newer
 - `C:\Program Files\Dell\CommandUpdate\dcu-cli.exe`
-- Configuration Manager client installed for SCCM tasks
+- Configuration Manager client installed
+- Valid endpoint SCCM site configuration
 
 ## Usage
 
@@ -36,14 +39,13 @@ Choose 'Proceed' when satisfied with task selection. The script will execute aut
 
 ## Known Issues
 
-1. Dell UEFI updates may fail on certain newer hardware models
-2. Dell firmware updates may require EDR approval to begin installation
-3. Dell CLI utility may fail to be invoked if Dell Command is self-updating during task execution
+1. Dell Command - UEFI updates may fail on certain newer hardware models
+2. Dell Command - Firmware updates may require EDR approval to begin installation
+3. Dell Command - Startup may fail if Dell Command is self-updating during task execution
 
 ## Notes
    
-- There is no individual selection of Configuration Manager client actions.
 - When creating a local user account, the user will be of the standard (non-administrative) type.
-- It is recommended to plug in portable devices when running the configuration manager tasks and Dell system updates.
-- This script is not compatible over a remote CLI session.
+- It is recommended to plug in portable devices when running system updates.
+- This script is interactive and is not compatible over a remote CLI session.
 - There is no password verification or confirmation when creating a local user.
