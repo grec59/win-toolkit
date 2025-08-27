@@ -1,4 +1,6 @@
 # --- GUI Layout ---
+Add-Type -AssemblyName PresentationFramework
+
 $xaml = @"
 <Window xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'
         Title='System Maintenance Tool'
@@ -44,7 +46,8 @@ $xaml = @"
 </Window>
 "@
 
-$reader = (New-Object System.Xml.XmlNodeReader ([xml]$xaml))
+# --- Load XAML ---
+$reader = New-Object System.Xml.XmlTextReader ([System.IO.StringReader]::new($xaml))
 $win = [Windows.Markup.XamlReader]::Load($reader)
 
 # --- Controls ---
@@ -53,21 +56,27 @@ $pbProgress = $win.FindName('pbProgress')
 $lblStatus  = $win.FindName('lblStatus')
 $checkBoxes = @('cbGP','cbCM','cbDell','cbUser','cbPower') | ForEach-Object { $win.FindName($_) }
 
+# --- Enable Proceed button if any checkbox is checked ---
 foreach ($cb in $checkBoxes) {
-    $cb.Add_Checked({ $btnOK.IsEnabled = $checkBoxes.IsChecked -contains $true })
-    $cb.Add_Unchecked({ $btnOK.IsEnabled = $checkBoxes.IsChecked -contains $true })
+    $cb.Add_Checked({
+        $btnOK.IsEnabled = ($checkBoxes | Where-Object { $_.IsChecked } | Measure-Object).Count -gt 0
+    })
+    $cb.Add_Unchecked({
+        $btnOK.IsEnabled = ($checkBoxes | Where-Object { $_.IsChecked } | Measure-Object).Count -gt 0
+    })
 }
 
+# --- Update Progress UI ---
 function Update-ProgressUI {
     param([int]$percent, [string]$message)
-    $pbProgress.Value = $percent
-    $lblStatus.Text = $message
-    [System.Windows.Forms.Application]::DoEvents() | Out-Null
+    $pbProgress.Dispatcher.Invoke([action]{ $pbProgress.Value = $percent })
+    $lblStatus.Dispatcher.Invoke([action]{ $lblStatus.Text = $message })
 }
 
-# --- Button Logic ---
+# --- Button Logic (runs tasks asynchronously) ---
 $btnOK.Add_Click({
-    $actions = @{
+    $btnOK.IsEnabled = $false
+    $tasks = @{
         GroupPolicy = $win.FindName('cbGP').IsChecked
         ConfigMgr   = $win.FindName('cbCM').IsChecked
         DellUpdates = $win.FindName('cbDell').IsChecked
@@ -75,30 +84,35 @@ $btnOK.Add_Click({
         PowerConfig = $win.FindName('cbPower').IsChecked
     }
 
-    $tasks = $actions.GetEnumerator() | Where-Object { $_.Value -eq $true }
-    $count = $tasks.Count
-    $step = 0
-    $summary = @()
+    Start-Job -ScriptBlock {
+        param($tasksRef)
 
-    foreach ($task in $tasks) {
-        $step++
-        $percent = [math]::Round(($step / $count) * 100)
+        $tasksList = $tasksRef.GetEnumerator() | Where-Object { $_.Value -eq $true }
+        $count = $tasksList.Count
+        $step = 0
+        $summary = @()
 
-        try {
-            switch ($task.Key) {
-                'GroupPolicy' { Update-ProgressUI $percent 'Updating Group Policy...'; Invoke-GroupPolicy; $summary += "Group Policy updated." }
-                'ConfigMgr'   { Update-ProgressUI $percent 'Running ConfigMgr Tasks...'; Execute-Actions; $summary += "ConfigMgr tasks completed." }
-                'DellUpdates' { Update-ProgressUI $percent 'Installing Dell Updates...'; Run-DellUpdates; $summary += "Dell updates executed." }
-                'CreateUser'  { Update-ProgressUI $percent 'Creating Local User...'; Create-User; $summary += "Local user created." }
-                'PowerConfig' { Update-ProgressUI $percent 'Disabling Sleep on AC...'; Disable-Sleep; $summary += "Sleep disabled on AC." }
+        foreach ($task in $tasksList) {
+            $step++
+            $percent = [math]::Round(($step / $count) * 100)
+
+            try {
+                switch ($task.Key) {
+                    'GroupPolicy' { Update-ProgressUI $percent 'Updating Group Policy...'; Invoke-GroupPolicy; $summary += "Group Policy updated." }
+                    'ConfigMgr'   { Update-ProgressUI $percent 'Running ConfigMgr Tasks...'; Execute-Actions; $summary += "ConfigMgr tasks completed." }
+                    'DellUpdates' { Update-ProgressUI $percent 'Installing Dell Updates...'; Run-DellUpdates; $summary += "Dell updates executed." }
+                    'CreateUser'  { Update-ProgressUI $percent 'Creating Local User...'; Create-User; $summary += "Local user created." }
+                    'PowerConfig' { Update-ProgressUI $percent 'Disabling Sleep on AC...'; Disable-Sleep; $summary += "Sleep disabled on AC." }
+                }
+            } catch {
+                $summary += "$($task.Key) failed. Check log."
             }
-        } catch {
-            $summary += "$($task.Key) failed. Check log."
         }
-    }
 
-    Update-ProgressUI 100 'All selected actions completed.'
-    [System.Windows.MessageBox]::Show(($summary -join "`n"),"Execution Summary",[System.Windows.MessageBoxButton]::OK,[System.Windows.MessageBoxImage]::Information) | Out-Null
+        Update-ProgressUI 100 'All selected actions completed.'
+        [System.Windows.MessageBox]::Show(($summary -join "`n"),"Execution Summary",[System.Windows.MessageBoxButton]::OK,[System.Windows.MessageBoxImage]::Information) | Out-Null
+
+    } -ArgumentList $tasks
 })
 
 # --- Show Window ---
