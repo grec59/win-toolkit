@@ -221,6 +221,11 @@ Write-Host $messageTasks
 while (($i = Read-Host " Press Y to continue or N to quit") -notmatch '^[YyNn]$') {}
 if ($i -notmatch '^[Yy]$') { exit }
 
+# Load WPF assembly
+Add-Type -AssemblyName PresentationFramework
+
+$xamlPath = if ($PSScriptRoot) { Join-Path $PSScriptRoot 'interface.xaml' } else { Join-Path (Get-Location) 'interface.xaml' }
+
 # Load XAML and window
 $reader = [System.Xml.XmlNodeReader](Get-Content "$PSScriptRoot\interface.xaml" -Raw)
 $win    = [Windows.Markup.XamlReader]::Load($reader)
