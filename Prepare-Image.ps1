@@ -1,4 +1,4 @@
-
+<#
 .DESCRIPTION
   This script executes administrative tasks on a Windows system, including:
     - Updating Group Policy
