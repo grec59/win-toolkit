@@ -224,7 +224,7 @@ if ($i -notmatch '^[Yy]$') { exit }
 # Load WPF assembly
 Add-Type -AssemblyName PresentationFramework
 
-$xamlUrl = 'https://raw.githubusercontent.com/<username>/<repo>/main/interface.xaml'
+$xamlUrl = 'https://raw.githubusercontent.com/grec59/win-toolkit/refs/heads/development/interface.xaml'
 $xamlContent = (New-Object Net.WebClient).DownloadString($xamlUrl)
 
 # Parse XAML correctly
