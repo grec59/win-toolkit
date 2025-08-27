@@ -226,136 +226,67 @@ if ($i -notmatch '^[Yy]$') { exit }
 Add-Type -AssemblyName PresentationFramework
 
 $xaml = @"
-<Window xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'
-        Title='System Maintenance Tool'
-        Height='420' Width='460'
-        WindowStartupLocation='CenterScreen'
-        ResizeMode='NoResize'>
-  <Grid Margin='15'>
-    <Grid.RowDefinitions>
-      <RowDefinition Height='Auto'/>
-      <RowDefinition Height='*'/>
-      <RowDefinition Height='Auto'/>
-    </Grid.RowDefinitions>
-
-    <StackPanel Grid.Row='0' Margin='0 0 0 15'>
-      <TextBlock Text='System Maintenance Actions' FontWeight='Bold' FontSize='16' Foreground='DarkBlue' HorizontalAlignment='Center'/>
-      <TextBlock Text='Select one or more actions to perform:' FontStyle='Italic' HorizontalAlignment='Center' Margin='0 5 0 0'/>
+<Window xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' Title='Select Actions' Height='250' Width='350' WindowStartupLocation='CenterScreen'>
+  <StackPanel Margin='10'>
+    <TextBlock FontWeight='Bold' Margin='0 0 0 10'>Choose the actions you want to perform:</TextBlock>
+    <CheckBox Name='cbGP' Content=' Update Group Policy' Margin='5'/>
+    <CheckBox Name='cbCM' Content=' Configuration Manager Tasks' Margin='5'/>
+    <CheckBox Name='cbDell' Content=' Install Dell System Updates' Margin='5'/>
+    <CheckBox Name='cbUser' Content=' Create a Local User Account' Margin='5'/>
+    <CheckBox Name='cbPowerSettings' Content=' Disable Sleep on AC' Margin='5'/>
+    <StackPanel Orientation='Horizontal' HorizontalAlignment='Right' Margin='0 15 0 0'>
+      <Button Name='btnOK' Width='75' Margin='5' IsDefault='True'>Proceed</Button>
+      <Button Width='75' Margin='5' IsCancel='True'>Cancel</Button>
     </StackPanel>
-
-    <StackPanel Grid.Row='1'>
-      <GroupBox Header='Available Actions' Margin='0 0 0 10'>
-        <StackPanel Margin='10'>
-          <CheckBox Name='cbGP' Content=' Update Group Policy' Margin='3'/>
-          <CheckBox Name='cbCM' Content=' Run Configuration Manager Tasks' Margin='3'/>
-          <CheckBox Name='cbDell' Content=' Install Dell System Updates' Margin='3'/>
-          <CheckBox Name='cbUser' Content=' Create Local User Account' Margin='3'/>
-          <CheckBox Name='cbPower' Content=' Disable Sleep on AC' Margin='3'/>
-        </StackPanel>
-      </GroupBox>
-
-      <GroupBox Header='Execution Progress'>
-        <StackPanel Margin='10'>
-          <ProgressBar Name='pbProgress' Height='20' Minimum='0' Maximum='100'/>
-          <TextBlock Name='lblStatus' Text='Waiting for user input...' Margin='0 5 0 0'/>
-        </StackPanel>
-      </GroupBox>
-    </StackPanel>
-
-    <StackPanel Grid.Row='2' Orientation='Horizontal' HorizontalAlignment='Right' Margin='0 15 0 0'>
-      <Button Name='btnOK' Width='85' Margin='5' IsDefault='True' IsEnabled='False'>Proceed</Button>
-      <Button Width='85' Margin='5' IsCancel='True'>Cancel</Button>
-    </StackPanel>
-  </Grid>
+  </StackPanel>
 </Window>
 "@
 
-# --- Load XAML ---
-$reader = New-Object System.Xml.XmlTextReader ([System.IO.StringReader]::new($xaml))
+$reader = (New-Object System.Xml.XmlNodeReader ([xml]$xaml))
 $win = [Windows.Markup.XamlReader]::Load($reader)
 
-# --- Controls ---
-$btnOK      = $win.FindName('btnOK')
-$pbProgress = $win.FindName('pbProgress')
-$lblStatus  = $win.FindName('lblStatus')
-$checkBoxes = @('cbGP','cbCM','cbDell','cbUser','cbPower') | ForEach-Object { $win.FindName($_) }
+# --- Capture GUI selections ---
 
-# --- Enable Proceed button if any checkbox is checked ---
-foreach ($cb in $checkBoxes) {
-    $cb.Add_Checked({
-        $btnOK.IsEnabled = ($checkBoxes | Where-Object { $_.IsChecked } | Measure-Object).Count -gt 0
-    })
-    $cb.Add_Unchecked({
-        $btnOK.IsEnabled = ($checkBoxes | Where-Object { $_.IsChecked } | Measure-Object).Count -gt 0
-    })
-}
-
-# --- Update Progress UI ---
-function Update-ProgressUI {
-    param([int]$percent, [string]$message)
-    $pbProgress.Dispatcher.Invoke([action]{ $pbProgress.Value = $percent })
-    $lblStatus.Dispatcher.Invoke([action]{ $lblStatus.Text = $message })
-}
-
+$btnOK = $win.FindName('btnOK')
 $btnOK.Add_Click({
-    $btnOK.IsEnabled = $false
-
-    # Build the list of selected tasks
-    $tasks = @(
-        @{Name='GroupPolicy'; Enabled=$win.FindName('cbGP').IsChecked},
-        @{Name='ConfigMgr';   Enabled=$win.FindName('cbCM').IsChecked},
-        @{Name='DellUpdates'; Enabled=$win.FindName('cbDell').IsChecked},
-        @{Name='CreateUser';  Enabled=$win.FindName('cbUser').IsChecked},
-        @{Name='PowerConfig'; Enabled=$win.FindName('cbPower').IsChecked}
-    )
-
-    # Run tasks asynchronously
-    [System.Threading.Tasks.Task]::Run([action]{
-        $selectedTasks = $tasks | Where-Object {$_.Enabled}
-        $count = $selectedTasks.Count
-        $step = 0
-        $summary = @()
-
-        foreach ($task in $selectedTasks) {
-            $step++
-            $percent = [math]::Round(($step / $count) * 100)
-            $message = "Executing $($task.Name)..."
-
-            # Update GUI
-            $pbProgress.Dispatcher.Invoke([action]{ $pbProgress.Value = $percent })
-            $lblStatus.Dispatcher.Invoke([action]{ $lblStatus.Text = $message })
-
-            try {
-                switch ($task.Name) {
-                    'GroupPolicy' { Invoke-GroupPolicy; $summary += "Group Policy updated." }
-                    'ConfigMgr'   { Execute-Actions;   $summary += "ConfigMgr tasks completed." }
-                    'DellUpdates' { Run-DellUpdates;   $summary += "Dell updates executed." }
-                    'CreateUser'  { Create-User;       $summary += "Local user created." }
-                    'PowerConfig' { Disable-Sleep;     $summary += "Sleep disabled on AC." }
-                }
-            } catch {
-                $summary += "$($task.Name) failed: $($_.Exception.Message)"
-            }
-        }
-
-        # Final UI update
-        $pbProgress.Dispatcher.Invoke([action]{ $pbProgress.Value = 100 })
-        $lblStatus.Dispatcher.Invoke([action]{ $lblStatus.Text = "All selected actions completed." })
-
-        # Show summary
-        $win.Dispatcher.Invoke([action]{
-            [System.Windows.MessageBox]::Show(($summary -join "`n"),"Execution Summary",[System.Windows.MessageBoxButton]::OK,[System.Windows.MessageBoxImage]::Information)
-        })
-
-        # Re-enable button
-        $win.Dispatcher.Invoke([action]{ $btnOK.IsEnabled = $true })
-    })
+    $win.Tag = @{
+        GroupPolicy = $win.FindName('cbGP').IsChecked
+        ConfigMgr  = $win.FindName('cbCM').IsChecked
+        DellUpdates = $win.FindName('cbDell').IsChecked
+        CreateUser = $win.FindName('cbUser').IsChecked
+        PowerConfig = $win.FindName('cbPowerSettings').IsChecked
+    }
+    $win.Close()
 })
 
-# --- Show Window ---
 $win.Topmost = $true
-$win.Activate() | Out-Null
-$win.ShowDialog() | Out-Null
+$win.Activate() | out-null
+$win.ShowDialog() | out-null
+$sel = $win.Tag
+
+Clear-Host
+
+# --- Execute tasks ---
+
+if ($sel.CreateUser) {
+    Create-User
+}
+
+if ($sel.GroupPolicy) {
+    Invoke-GroupPolicy
+}
+
+if ($sel.ConfigMgr) {
+    Execute-Actions
+}
+
+if ($sel.DellUpdates) {
+    Run-DellUpdates
+}
+
+if ($sel.PowerConfig) {
+    Disable-Sleep
+}
 
 " " | Out-File -FilePath $output -Encoding utf8 -Append
 "Script execution complete." | Out-File -FilePath $output -Encoding utf8 -Append
