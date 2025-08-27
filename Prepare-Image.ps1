@@ -224,10 +224,14 @@ if ($i -notmatch '^[Yy]$') { exit }
 # Load WPF assembly
 Add-Type -AssemblyName PresentationFramework
 
-$xamlPath = if ($PSScriptRoot) { Join-Path $PSScriptRoot 'interface.xaml' } else { Join-Path (Get-Location) 'interface.xaml' }
+# URL of your raw GitHub XAML
+$xamlUrl = 'https://raw.githubusercontent.com/grec59/win-toolkit/refs/heads/development/interface.xaml'
 
-# Load XAML and window
-$reader = [System.Xml.XmlNodeReader](Get-Content "$PSScriptRoot\interface.xaml" -Raw)
+# Download XAML content
+$xamlContent = (New-Object System.Net.WebClient).DownloadString($xamlUrl)
+
+# Load XAML
+$reader = [System.Xml.XmlNodeReader]([xml]$xamlContent)
 $win    = [Windows.Markup.XamlReader]::Load($reader)
 
 # Controls
