@@ -296,47 +296,42 @@ function Update-ProgressUI {
     $pbProgress.Dispatcher.Invoke([action]{ $pbProgress.Value = $percent })
     $lblStatus.Dispatcher.Invoke([action]{ $lblStatus.Text = $message })
 }
-
-# --- Button Logic (runs tasks asynchronously) ---
+# Button Logic
 $btnOK.Add_Click({
     $btnOK.IsEnabled = $false
-    $tasks = @{
-        GroupPolicy = $win.FindName('cbGP').IsChecked
-        ConfigMgr   = $win.FindName('cbCM').IsChecked
-        DellUpdates = $win.FindName('cbDell').IsChecked
-        CreateUser  = $win.FindName('cbUser').IsChecked
-        PowerConfig = $win.FindName('cbPower').IsChecked
-    }
+    $tasks = @(
+        @{Name='GroupPolicy'; Enabled=$win.FindName('cbGP').IsChecked},
+        @{Name='ConfigMgr'; Enabled=$win.FindName('cbCM').IsChecked},
+        @{Name='DellUpdates'; Enabled=$win.FindName('cbDell').IsChecked},
+        @{Name='CreateUser'; Enabled=$win.FindName('cbUser').IsChecked},
+        @{Name='PowerConfig'; Enabled=$win.FindName('cbPower').IsChecked}
+    )
 
-    Start-Job -ScriptBlock {
-        param($tasksRef)
-
-        $tasksList = $tasksRef.GetEnumerator() | Where-Object { $_.Value -eq $true }
-        $count = $tasksList.Count
+    [System.Threading.Tasks.Task]::Run({
+        $count = ($tasks | Where-Object {$_.Enabled}).Count
         $step = 0
-        $summary = @()
-
-        foreach ($task in $tasksList) {
+        foreach ($task in $tasks | Where-Object {$_.Enabled}) {
             $step++
             $percent = [math]::Round(($step / $count) * 100)
+            $message = "Executing $($task.Name)..."
 
-            try {
-                switch ($task.Key) {
-                    'GroupPolicy' { Update-ProgressUI $percent 'Updating Group Policy...'; Invoke-GroupPolicy; $summary += "Group Policy updated." }
-                    'ConfigMgr'   { Update-ProgressUI $percent 'Running ConfigMgr Tasks...'; Execute-Actions; $summary += "ConfigMgr tasks completed." }
-                    'DellUpdates' { Update-ProgressUI $percent 'Installing Dell Updates...'; Run-DellUpdates; $summary += "Dell updates executed." }
-                    'CreateUser'  { Update-ProgressUI $percent 'Creating Local User...'; Create-User; $summary += "Local user created." }
-                    'PowerConfig' { Update-ProgressUI $percent 'Disabling Sleep on AC...'; Disable-Sleep; $summary += "Sleep disabled on AC." }
-                }
-            } catch {
-                $summary += "$($task.Key) failed. Check log."
+            # Safely update GUI
+            $pbProgress.Dispatcher.Invoke([action]{ $pbProgress.Value = $percent })
+            $lblStatus.Dispatcher.Invoke([action]{ $lblStatus.Text = $message })
+
+            switch ($task.Name) {
+                'GroupPolicy' { Invoke-GroupPolicy }
+                'ConfigMgr'   { Execute-Actions }
+                'DellUpdates' { Run-DellUpdates }
+                'CreateUser'  { Create-User }
+                'PowerConfig' { Disable-Sleep }
             }
         }
 
-        Update-ProgressUI 100 'All selected actions completed.'
-        [System.Windows.MessageBox]::Show(($summary -join "`n"),"Execution Summary",[System.Windows.MessageBoxButton]::OK,[System.Windows.MessageBoxImage]::Information) | Out-Null
-
-    } -ArgumentList $tasks
+        # Final UI update
+        $pbProgress.Dispatcher.Invoke([action]{ $pbProgress.Value = 100 })
+        $lblStatus.Dispatcher.Invoke([action]{ $lblStatus.Text = "All selected actions completed." })
+    })
 })
 
 # --- Show Window ---
