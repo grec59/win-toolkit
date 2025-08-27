@@ -221,22 +221,127 @@ Write-Host $messageTasks
 while (($i = Read-Host " Press Y to continue or N to quit") -notmatch '^[YyNn]$') {}
 if ($i -notmatch '^[Yy]$') { exit }
 
-# Load WPF assembly
+# --- Build GUI ---
+
 Add-Type -AssemblyName PresentationFramework
 
-$xamlUrl = 'https://raw.githubusercontent.com/grec59/win-toolkit/development/interface.xaml'
-$xamlContent = (New-Object Net.WebClient).DownloadString($xamlUrl)
+$xaml = @"
+<Window xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'
+        Title='System Maintenance Tool'
+        Height='420' Width='460'
+        WindowStartupLocation='CenterScreen'
+        ResizeMode='NoResize'>
+  <Grid Margin='15'>
+    <Grid.RowDefinitions>
+      <RowDefinition Height='Auto'/>
+      <RowDefinition Height='*'/>
+      <RowDefinition Height='Auto'/>
+    </Grid.RowDefinitions>
 
-# Parse XAML correctly
-$xmlReader = New-Object System.Xml.XmlTextReader -ArgumentList ([System.IO.StringReader]::new($xamlContent))
-$win = [Windows.Markup.XamlReader]::Load($xmlReader)
+    <StackPanel Grid.Row='0' Margin='0 0 0 15'>
+      <TextBlock Text='System Maintenance Actions' FontWeight='Bold' FontSize='16' Foreground='DarkBlue' HorizontalAlignment='Center'/>
+      <TextBlock Text='Select one or more actions to perform:' FontStyle='Italic' HorizontalAlignment='Center' Margin='0 5 0 0'/>
+    </StackPanel>
 
-# Controls
+    <StackPanel Grid.Row='1'>
+      <GroupBox Header='Available Actions' Margin='0 0 0 10'>
+        <StackPanel Margin='10'>
+          <CheckBox Name='cbGP' Content=' Update Group Policy' Margin='3'/>
+          <CheckBox Name='cbCM' Content=' Run Configuration Manager Tasks' Margin='3'/>
+          <CheckBox Name='cbDell' Content=' Install Dell System Updates' Margin='3'/>
+          <CheckBox Name='cbUser' Content=' Create Local User Account' Margin='3'/>
+          <CheckBox Name='cbPower' Content=' Disable Sleep on AC' Margin='3'/>
+        </StackPanel>
+      </GroupBox>
+
+      <GroupBox Header='Execution Progress'>
+        <StackPanel Margin='10'>
+          <ProgressBar Name='pbProgress' Height='20' Minimum='0' Maximum='100'/>
+          <TextBlock Name='lblStatus' Text='Waiting for user input...' Margin='0 5 0 0'/>
+        </StackPanel>
+      </GroupBox>
+    </StackPanel>
+
+    <StackPanel Grid.Row='2' Orientation='Horizontal' HorizontalAlignment='Right' Margin='0 15 0 0'>
+      <Button Name='btnOK' Width='85' Margin='5' IsDefault='True' IsEnabled='False'>Proceed</Button>
+      <Button Width='85' Margin='5' IsCancel='True'>Cancel</Button>
+    </StackPanel>
+  </Grid>
+</Window>
+"@
+
+# --- Load XAML ---
+$reader = New-Object System.Xml.XmlTextReader ([System.IO.StringReader]::new($xaml))
+$win = [Windows.Markup.XamlReader]::Load($reader)
+
+# --- Controls ---
 $btnOK      = $win.FindName('btnOK')
 $pbProgress = $win.FindName('pbProgress')
 $lblStatus  = $win.FindName('lblStatus')
+$checkBoxes = @('cbGP','cbCM','cbDell','cbUser','cbPower') | ForEach-Object { $win.FindName($_) }
 
-# Show window
+# --- Enable Proceed button if any checkbox is checked ---
+foreach ($cb in $checkBoxes) {
+    $cb.Add_Checked({
+        $btnOK.IsEnabled = ($checkBoxes | Where-Object { $_.IsChecked } | Measure-Object).Count -gt 0
+    })
+    $cb.Add_Unchecked({
+        $btnOK.IsEnabled = ($checkBoxes | Where-Object { $_.IsChecked } | Measure-Object).Count -gt 0
+    })
+}
+
+# --- Update Progress UI ---
+function Update-ProgressUI {
+    param([int]$percent, [string]$message)
+    $pbProgress.Dispatcher.Invoke([action]{ $pbProgress.Value = $percent })
+    $lblStatus.Dispatcher.Invoke([action]{ $lblStatus.Text = $message })
+}
+
+# --- Button Logic (runs tasks asynchronously) ---
+$btnOK.Add_Click({
+    $btnOK.IsEnabled = $false
+    $tasks = @{
+        GroupPolicy = $win.FindName('cbGP').IsChecked
+        ConfigMgr   = $win.FindName('cbCM').IsChecked
+        DellUpdates = $win.FindName('cbDell').IsChecked
+        CreateUser  = $win.FindName('cbUser').IsChecked
+        PowerConfig = $win.FindName('cbPower').IsChecked
+    }
+
+    Start-Job -ScriptBlock {
+        param($tasksRef)
+
+        $tasksList = $tasksRef.GetEnumerator() | Where-Object { $_.Value -eq $true }
+        $count = $tasksList.Count
+        $step = 0
+        $summary = @()
+
+        foreach ($task in $tasksList) {
+            $step++
+            $percent = [math]::Round(($step / $count) * 100)
+
+            try {
+                switch ($task.Key) {
+                    'GroupPolicy' { Update-ProgressUI $percent 'Updating Group Policy...'; Invoke-GroupPolicy; $summary += "Group Policy updated." }
+                    'ConfigMgr'   { Update-ProgressUI $percent 'Running ConfigMgr Tasks...'; Execute-Actions; $summary += "ConfigMgr tasks completed." }
+                    'DellUpdates' { Update-ProgressUI $percent 'Installing Dell Updates...'; Run-DellUpdates; $summary += "Dell updates executed." }
+                    'CreateUser'  { Update-ProgressUI $percent 'Creating Local User...'; Create-User; $summary += "Local user created." }
+                    'PowerConfig' { Update-ProgressUI $percent 'Disabling Sleep on AC...'; Disable-Sleep; $summary += "Sleep disabled on AC." }
+                }
+            } catch {
+                $summary += "$($task.Key) failed. Check log."
+            }
+        }
+
+        Update-ProgressUI 100 'All selected actions completed.'
+        [System.Windows.MessageBox]::Show(($summary -join "`n"),"Execution Summary",[System.Windows.MessageBoxButton]::OK,[System.Windows.MessageBoxImage]::Information) | Out-Null
+
+    } -ArgumentList $tasks
+})
+
+# --- Show Window ---
+$win.Topmost = $true
+$win.Activate() | Out-Null
 $win.ShowDialog() | Out-Null
 
 " " | Out-File -FilePath $output -Encoding utf8 -Append
