@@ -224,22 +224,19 @@ if ($i -notmatch '^[Yy]$') { exit }
 # Load WPF assembly
 Add-Type -AssemblyName PresentationFramework
 
-# URL of your raw GitHub XAML
-$xamlUrl = 'https://raw.githubusercontent.com/grec59/win-toolkit/refs/heads/development/interface.xaml'
+$xamlUrl = 'https://raw.githubusercontent.com/<username>/<repo>/main/interface.xaml'
+$xamlContent = (New-Object Net.WebClient).DownloadString($xamlUrl)
 
-# Download XAML content
-$xamlContent = (New-Object System.Net.WebClient).DownloadString($xamlUrl)
-
-# Load XAML
-$reader = [System.Xml.XmlNodeReader]([xml]$xamlContent)
-$win    = [Windows.Markup.XamlReader]::Load($reader)
+# Parse XAML correctly
+$xmlReader = New-Object System.Xml.XmlTextReader -ArgumentList ([System.IO.StringReader]::new($xamlContent))
+$win = [Windows.Markup.XamlReader]::Load($xmlReader)
 
 # Controls
 $btnOK      = $win.FindName('btnOK')
 $pbProgress = $win.FindName('pbProgress')
 $lblStatus  = $win.FindName('lblStatus')
 
-# Show
+# Show window
 $win.ShowDialog() | Out-Null
 
 " " | Out-File -FilePath $output -Encoding utf8 -Append
