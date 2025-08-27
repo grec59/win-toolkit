@@ -296,6 +296,7 @@ function Update-ProgressUI {
     $pbProgress.Dispatcher.Invoke([action]{ $pbProgress.Value = $percent })
     $lblStatus.Dispatcher.Invoke([action]{ $lblStatus.Text = $message })
 }
+
 $btnOK.Add_Click({
     $btnOK.IsEnabled = $false
 
@@ -309,10 +310,8 @@ $btnOK.Add_Click({
     )
 
     # Run tasks asynchronously
-    [System.Threading.Tasks.Task]::Run({
-        param($tasksList)
-
-        $selectedTasks = $tasksList | Where-Object {$_.Enabled}
+    [System.Threading.Tasks.Task]::Run([action]{
+        $selectedTasks = $tasks | Where-Object {$_.Enabled}
         $count = $selectedTasks.Count
         $step = 0
         $summary = @()
@@ -322,7 +321,7 @@ $btnOK.Add_Click({
             $percent = [math]::Round(($step / $count) * 100)
             $message = "Executing $($task.Name)..."
 
-            # Update progress safely in the GUI thread
+            # Update GUI
             $pbProgress.Dispatcher.Invoke([action]{ $pbProgress.Value = $percent })
             $lblStatus.Dispatcher.Invoke([action]{ $lblStatus.Text = $message })
 
@@ -343,15 +342,14 @@ $btnOK.Add_Click({
         $pbProgress.Dispatcher.Invoke([action]{ $pbProgress.Value = 100 })
         $lblStatus.Dispatcher.Invoke([action]{ $lblStatus.Text = "All selected actions completed." })
 
-        # Show summary in a message box on the GUI thread
+        # Show summary
         $win.Dispatcher.Invoke([action]{
             [System.Windows.MessageBox]::Show(($summary -join "`n"),"Execution Summary",[System.Windows.MessageBoxButton]::OK,[System.Windows.MessageBoxImage]::Information)
         })
 
-        # Re-enable button if you want to allow another run
+        # Re-enable button
         $win.Dispatcher.Invoke([action]{ $btnOK.IsEnabled = $true })
-
-    }) -ArgumentList $tasks
+    })
 })
 
 # --- Show Window ---
