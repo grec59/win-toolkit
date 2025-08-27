@@ -221,72 +221,17 @@ Write-Host $messageTasks
 while (($i = Read-Host " Press Y to continue or N to quit") -notmatch '^[YyNn]$') {}
 if ($i -notmatch '^[Yy]$') { exit }
 
-# --- Build GUI ---
+# Load XAML and window
+$reader = [System.Xml.XmlNodeReader](Get-Content "$PSScriptRoot\interface.xaml" -Raw)
+$win    = [Windows.Markup.XamlReader]::Load($reader)
 
-Add-Type -AssemblyName PresentationFramework
+# Controls
+$btnOK      = $win.FindName('btnOK')
+$pbProgress = $win.FindName('pbProgress')
+$lblStatus  = $win.FindName('lblStatus')
 
-$xaml = @"
-<Window xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' Title='Select Actions' Height='250' Width='350' WindowStartupLocation='CenterScreen'>
-  <StackPanel Margin='10'>
-    <TextBlock FontWeight='Bold' Margin='0 0 0 10'>Choose the actions you want to perform:</TextBlock>
-    <CheckBox Name='cbGP' Content=' Update Group Policy' Margin='5'/>
-    <CheckBox Name='cbCM' Content=' Configuration Manager Tasks' Margin='5'/>
-    <CheckBox Name='cbDell' Content=' Install Dell System Updates' Margin='5'/>
-    <CheckBox Name='cbUser' Content=' Create a Local User Account' Margin='5'/>
-    <CheckBox Name='cbPowerSettings' Content=' Disable Sleep on AC' Margin='5'/>
-    <StackPanel Orientation='Horizontal' HorizontalAlignment='Right' Margin='0 15 0 0'>
-      <Button Name='btnOK' Width='75' Margin='5' IsDefault='True'>Proceed</Button>
-      <Button Width='75' Margin='5' IsCancel='True'>Cancel</Button>
-    </StackPanel>
-  </StackPanel>
-</Window>
-"@
-
-$reader = (New-Object System.Xml.XmlNodeReader ([xml]$xaml))
-$win = [Windows.Markup.XamlReader]::Load($reader)
-
-# --- Capture GUI selections ---
-
-$btnOK = $win.FindName('btnOK')
-$btnOK.Add_Click({
-    $win.Tag = @{
-        GroupPolicy = $win.FindName('cbGP').IsChecked
-        ConfigMgr  = $win.FindName('cbCM').IsChecked
-        DellUpdates = $win.FindName('cbDell').IsChecked
-        CreateUser = $win.FindName('cbUser').IsChecked
-        PowerConfig = $win.FindName('cbPowerSettings').IsChecked
-    }
-    $win.Close()
-})
-
-$win.Topmost = $true
-$win.Activate() | out-null
-$win.ShowDialog() | out-null
-$sel = $win.Tag
-
-Clear-Host
-
-# --- Execute tasks ---
-
-if ($sel.CreateUser) {
-    Create-User
-}
-
-if ($sel.GroupPolicy) {
-    Invoke-GroupPolicy
-}
-
-if ($sel.ConfigMgr) {
-    Execute-Actions
-}
-
-if ($sel.DellUpdates) {
-    Run-DellUpdates
-}
-
-if ($sel.PowerConfig) {
-    Disable-Sleep
-}
+# Show
+$win.ShowDialog() | Out-Null
 
 " " | Out-File -FilePath $output -Encoding utf8 -Append
 "Script execution complete." | Out-File -FilePath $output -Encoding utf8 -Append
