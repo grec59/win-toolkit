@@ -277,19 +277,90 @@ if ($i -notmatch '^[Yy]$') { exit }
 Add-Type -AssemblyName PresentationFramework
 
 $xaml = @"
-<Window xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' Title='Select Actions' Height='250' Width='350' WindowStartupLocation='CenterScreen'>
-  <StackPanel Margin='10'>
-    <TextBlock FontWeight='Bold' Margin='0 0 0 10'>Choose the actions you want to perform:</TextBlock>
-    <CheckBox Name='cbGP' Content=' Update Group Policy' Margin='5'/>
-    <CheckBox Name='cbCM' Content=' Configuration Manager Tasks' Margin='5'/>
-    <CheckBox Name='cbDell' Content=' Install Dell System Updates' Margin='5'/>
-    <CheckBox Name='cbUser' Content=' Create a Local User Account' Margin='5'/>
-    <CheckBox Name='cbPowerSettings' Content=' Disable Sleep on AC' Margin='5'/>
-    <StackPanel Orientation='Horizontal' HorizontalAlignment='Right' Margin='0 15 0 0'>
-      <Button Name='btnOK' Width='75' Margin='5' IsDefault='True'>Proceed</Button>
-      <Button Width='75' Margin='5' IsCancel='True'>Cancel</Button>
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        Title="System Maintenance Tool"
+        Height="540" Width="550"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResize"
+        MinWidth="550" MaxWidth="550"
+        MinHeight="500" MaxHeight="720"
+        Background="#f4f6f9"
+        FontFamily="Segoe UI">
+  <Window.Resources>
+    <Style TargetType="ToolTip">
+      <Setter Property="ToolTipService.InitialShowDelay" Value="400"/>
+      <Setter Property="ToolTipService.BetweenShowDelay" Value="0"/>
+      <Setter Property="ToolTipService.ShowDuration" Value="8000"/>
+    </Style>
+  </Window.Resources>
+  <Grid Margin="15">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+    <!-- Header -->
+    <StackPanel Grid.Row="0" Margin="0 0 0 15">
+      <TextBlock Text="System Maintenance Actions" 
+                 FontWeight="Bold" FontSize="16" 
+                 Foreground="DarkBlue"
+                 HorizontalAlignment="Center"/>
+      <TextBlock Text="Select one or more actions to perform:" 
+                 FontStyle="Italic"
+                 Foreground="Gray"
+                 HorizontalAlignment="Center"
+                 Margin="0 5 0 0"/>
     </StackPanel>
-  </StackPanel>
+    <!-- Options + Progress -->
+    <StackPanel Grid.Row="1">
+      <GroupBox Header="Available Actions" FontWeight="SemiBold" Margin="0 0 0 10">
+        <StackPanel Margin="12">
+          <CheckBox Name="cbGP" Content=" Update Group Policy" Margin="5"
+                    ToolTip="Force a Group Policy update for computer and user settings."/>
+          <CheckBox Name="cbCM" Content=" Run Configuration Manager Tasks" Margin="5"
+                    ToolTip="Synchronize SCCM client actions like inventory and application scan."/>
+          <CheckBox Name="cbDell" Content=" Install Dell System Updates" Margin="5"
+                    ToolTip="Run Dell Command Update to install BIOS, driver, and firmware updates."/>
+          <CheckBox Name="cbUser" Content=" Create Local User Account" Margin="5"
+                    ToolTip="Create a new local user account for troubleshooting or configuration."/>
+          <CheckBox Name="cbPowerSettings" Content=" Disable Sleep on AC Power" Margin="5"
+                    ToolTip="Prevents the machine from entering sleep mode while plugged in."/>
+        </StackPanel>
+      </GroupBox>
+      <!-- Progress Area -->
+      <GroupBox Header="Execution Progress" FontWeight="SemiBold">
+        <StackPanel Margin="12">
+          <ProgressBar Name="pbProgress" Height="20" Minimum="0" Maximum="100" Foreground="#0078d7"/>
+          <TextBlock Name="lblStatus" Text="Waiting for user input..." Margin="0 5 0 10" Foreground="DimGray"/>
+          <TextBox Name="txtLog" Height="180" 
+                   VerticalScrollBarVisibility="Auto" 
+                   IsReadOnly="True"
+                   Background="WhiteSmoke"
+                   Foreground="Black"
+                   FontFamily="Consolas"
+                   TextWrapping="Wrap"/>
+        </StackPanel>
+      </GroupBox>
+    </StackPanel>
+    <!-- Buttons -->
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0 15 0 5">
+      <Button Name="btnOK" Width="90" Height="30" Margin="5" IsDefault="True" IsEnabled="False"
+              Background="#0078d7" Foreground="White" FontWeight="SemiBold" BorderBrush="#005a9e">
+        Proceed
+      </Button>
+      <Button Name="btnCancel" Width="90" Height="30" Margin="5" IsCancel="True"
+              Background="#cccccc" Foreground="Black" BorderBrush="#999999">
+        Cancel
+      </Button>
+    </StackPanel>
+    <!-- Footer / Version Banner (bound dynamically later) -->
+    <TextBlock Name="txtFooter" Grid.Row="3"
+               HorizontalAlignment="Right"
+               Foreground="Gray"
+               FontSize="11"
+               Margin="0,5,0,0"/>
+  </Grid>
 </Window>
 "@
 
