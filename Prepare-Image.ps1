@@ -275,250 +275,114 @@ if ($i -notmatch '^[Yy]$') { exit }
 # --- Build GUI ---
 
 Add-Type -AssemblyName PresentationFramework
-Add-Type -AssemblyName PresentationCore
-Add-Type -AssemblyName System.Windows.Forms   # For DoEvents()
 
-$ToolVersion = "1.0"
-
-# --- XAML GUI ---
+# Define enhanced XAML GUI
 $xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        Title="System Maintenance Tool"
-        Height="540" Width="550"
+        Title="Toolkit Action Selector"
+        Height="320"
+        Width="420"
+        Background="#f2f5f7"
         WindowStartupLocation="CenterScreen"
-        ResizeMode="CanResize"
-        MinWidth="550" MaxWidth="550"
-        MinHeight="500" MaxHeight="720"
-        Background="#f4f6f9"
+        WindowStyle="SingleBorderWindow"
+        ResizeMode="NoResize"
         FontFamily="Segoe UI">
-  <Window.Resources>
-    <Style TargetType="ToolTip">
-      <Setter Property="ToolTipService.InitialShowDelay" Value="400"/>
-      <Setter Property="ToolTipService.BetweenShowDelay" Value="0"/>
-      <Setter Property="ToolTipService.ShowDuration" Value="8000"/>
-    </Style>
-  </Window.Resources>
-  <Grid Margin="15">
-    <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="*"/>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
-    </Grid.RowDefinitions>
-
-    <!-- Header -->
-    <StackPanel Grid.Row="0" Margin="0 0 0 15">
-      <TextBlock Text="System Maintenance Actions" 
-                 FontWeight="Bold" FontSize="16" 
-                 Foreground="DarkBlue"
-                 HorizontalAlignment="Center"/>
-      <TextBlock Text="Select one or more actions to perform:" 
-                 FontStyle="Italic"
-                 Foreground="Gray"
-                 HorizontalAlignment="Center"
-                 Margin="0 5 0 0"/>
-    </StackPanel>
-
-    <!-- Options -->
-    <StackPanel Grid.Row="1">
-      <GroupBox Header="Available Actions" FontWeight="SemiBold" Margin="0 0 0 10">
-        <StackPanel Margin="12">
-          <CheckBox Name="cbGP" Content=" Update Group Policy" Margin="5"
-                    ToolTip="Force a Group Policy update for computer and user settings."/>
-          <CheckBox Name="cbCM" Content=" Run Configuration Manager Tasks" Margin="5"
-                    ToolTip="Synchronize SCCM client actions like inventory and application scan."/>
-          <CheckBox Name="cbDell" Content=" Install Dell System Updates" Margin="5"
-                    ToolTip="Run Dell Command Update to install BIOS, driver, and firmware updates."/>
-          <CheckBox Name="cbUser" Content=" Create Local User Account" Margin="5"
-                    ToolTip="Create a new local user account for troubleshooting or configuration."/>
-          <CheckBox Name="cbPowerSettings" Content=" Disable Sleep on AC Power" Margin="5"
-                    ToolTip="Prevents the machine from entering sleep mode while plugged in."/>
+    
+    <DockPanel Margin="15">
+        <!-- Title -->
+        <StackPanel DockPanel.Dock="Top" Margin="0 0 0 15">
+            <TextBlock Text="Choose the actions you want to perform:"
+                       FontSize="14"
+                       FontWeight="Bold"
+                       Foreground="#2b2b2b"
+                       Margin="0 0 0 10"/>
+            <Separator Margin="0 0 0 5"/>
         </StackPanel>
-      </GroupBox>
 
-      <!-- Progress Area -->
-      <GroupBox Header="Execution Progress" FontWeight="SemiBold">
-        <StackPanel Margin="12">
-          <ProgressBar Name="pbProgress" Height="20" Minimum="0" Maximum="100" Foreground="#0078d7"/>
-          <TextBlock Name="lblStatus" Text="Waiting for user input..." Margin="0 5 0 10" Foreground="DimGray"/>
-          <TextBox Name="txtLog" Height="180" 
-                   VerticalScrollBarVisibility="Auto" 
-                   IsReadOnly="True"
-                   Background="WhiteSmoke"
-                   Foreground="Black"
-                   FontFamily="Consolas"
-                   TextWrapping="Wrap"/>
+        <!-- Options -->
+        <StackPanel DockPanel.Dock="Top" Margin="10,0,0,0">
+            <CheckBox Name="cbGP"
+                      Content=" Update Group Policy"
+                      Margin="5"
+                      ToolTip="Run gpupdate /force to refresh computer and user policies."/>
+            
+            <CheckBox Name="cbCM"
+                      Content=" Run Configuration Manager Tasks"
+                      Margin="5"
+                      ToolTip="Trigger software/hardware inventory and application deployments."/>
+
+            <CheckBox Name="cbDell"
+                      Content=" Install Dell System Updates"
+                      Margin="5"
+                      ToolTip="Run Dell Command Update to check for BIOS, driver, and firmware updates."/>
+
+            <CheckBox Name="cbUser"
+                      Content=" Create a Local User Account"
+                      Margin="5"
+                      ToolTip="Add a new local account for troubleshooting."/>
+            
+            <CheckBox Name="cbPowerSettings"
+                      Content=" Disable Sleep on AC Power"
+                      Margin="5"
+                      ToolTip="Prevent system from entering sleep mode while plugged in."/>
         </StackPanel>
-      </GroupBox>
-    </StackPanel>
 
-    <!-- Buttons -->
-    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0 15 0 5">
-      <Button Name="btnOK" Width="90" Height="30" Margin="5" IsDefault="True" IsEnabled="False"
-              Background="#0078d7" Foreground="White" FontWeight="SemiBold" BorderBrush="#005a9e">
-        Proceed
-      </Button>
-      <Button Name="btnCancel" Width="90" Height="30" Margin="5" IsCancel="True"
-              Background="#cccccc" Foreground="Black" BorderBrush="#999999">
-        Cancel
-      </Button>
-    </StackPanel>
-
-    <!-- Footer -->
-    <TextBlock Name="txtFooter" Grid.Row="3"
-               HorizontalAlignment="Right"
-               Foreground="Gray"
-               FontSize="11"
-               Margin="0,5,0,0"/>
-  </Grid>
+        <!-- Button Controls -->
+        <StackPanel Orientation="Horizontal"
+                    DockPanel.Dock="Bottom"
+                    HorizontalAlignment="Right"
+                    Margin="0,20,0,0">
+            <Button Name="btnOK"
+                    Width="90"
+                    Height="28"
+                    Margin="5"
+                    IsDefault="True"
+                    Background="#0078d7"
+                    Foreground="White"
+                    FontWeight="SemiBold"
+                    BorderBrush="#005a9e"
+                    ToolTip="Proceed with the selected actions.">
+                Proceed
+            </Button>
+            <Button Width="90"
+                    Height="28"
+                    Margin="5"
+                    IsCancel="True"
+                    Background="#cccccc"
+                    Foreground="Black"
+                    BorderBrush="#999999"
+                    ToolTip="Cancel and close this window.">
+                Cancel
+            </Button>
+        </StackPanel>
+    </DockPanel>
 </Window>
 "@
 
-# --- Load GUI ---
+# Parse XAML
 $reader = (New-Object System.Xml.XmlNodeReader ([xml]$xaml))
-$win     = [Windows.Markup.XamlReader]::Load($reader)
+$win = [Windows.Markup.XamlReader]::Load($reader)
 
-# --- Controls ---
-$btnOK      = $win.FindName('btnOK')
-$btnCancel  = $win.FindName('btnCancel')
-$pbProgress = $win.FindName('pbProgress')
-$lblStatus  = $win.FindName('lblStatus')
-$txtLog     = $win.FindName('txtLog')
-$footer     = $win.FindName('txtFooter')
-
-$checkBoxes = @('cbGP','cbCM','cbDell','cbUser','cbPowerSettings') | ForEach-Object { $win.FindName($_) }
-
-# Footer version
-$footer.Text = "System Maintenance Tool v$ToolVersion"
-
-# Cancel flag and handlers
-$global:CancelRequested = $false
-$btnCancel.Add_Click({ 
-    $global:CancelRequested = $true
-    Update-ProgressUI $pbProgress.Value "Cancellation requested by user..."
-})
-
-# Enable Proceed button only if any checkbox is selected
-foreach ($cb in $checkBoxes) {
-    $cb.Add_Checked({
-        $btnOK.IsEnabled = ($checkBoxes | Where-Object { $_.IsChecked }).Count -gt 0
-    })
-    $cb.Add_Unchecked({
-        $btnOK.IsEnabled = ($checkBoxes | Where-Object { $_.IsChecked }).Count -gt 0
-    })
-}
-$btnOK.IsEnabled = ($checkBoxes | Where-Object { $_.IsChecked }).Count -gt 0
-
-# Helper function to update progress and log
-function Update-ProgressUI {
-    param([int]$percent, [string]$message)
-    $pbProgress.Value = $percent
-    $lblStatus.Text   = $message
-    $txtLog.AppendText("[$(Get-Date -Format 'HH:mm:ss')] $message`r`n")
-    $txtLog.ScrollToEnd()
-    [System.Windows.Forms.Application]::DoEvents() | Out-Null
-}
-
-# Override Write-Host to output to GUI and console
-$originalWriteHost = (Get-Command Write-Host).Definition
-function Write-Host {
-    param(
-        [Parameter(ValueFromRemainingArguments = $true)]
-        $Args
-    )
-    # Compose the text string from arguments
-    $text = -join ($Args -join " ")
-    # Append to GUI text box in thread-safe way
-    if ($txtLog.Dispatcher.CheckAccess()) {
-        $txtLog.AppendText("[$(Get-Date -Format 'HH:mm:ss')] $text`r`n")
-        $txtLog.ScrollToEnd()
-    } else {
-        $txtLog.Dispatcher.Invoke({
-            $txtLog.AppendText("[$(Get-Date -Format 'HH:mm:ss')] $text`r`n")
-            $txtLog.ScrollToEnd()
-        })
-    }
-    # Also call original Write-Host for console output
-    Microsoft.PowerShell.Utility\Write-Host @Args
-}
-
-# Double-click on log copies text to clipboard
-$txtLog.Add_MouseDoubleClick({
-    [System.Windows.Clipboard]::SetText($txtLog.Text)
-    [System.Windows.MessageBox]::Show("Log copied to clipboard.","Info",
-        [System.Windows.MessageBoxButton]::OK,[System.Windows.MessageBoxImage]::Information) | Out-Null
-})
-
-# Proceed button logic
+# --- Capture GUI selections ---
+$btnOK = $win.FindName("btnOK")
 $btnOK.Add_Click({
-    $actions = @{
-        GroupPolicy  = $win.FindName('cbGP').IsChecked
-        ConfigMgr    = $win.FindName('cbCM').IsChecked
-        DellUpdates  = $win.FindName('cbDell').IsChecked
-        CreateUser   = $win.FindName('cbUser').IsChecked
-        PowerConfig  = $win.FindName('cbPowerSettings').IsChecked
+    $win.Tag = @{
+        GroupPolicy  = $win.FindName("cbGP").IsChecked
+        ConfigMgr    = $win.FindName("cbCM").IsChecked
+        DellUpdates  = $win.FindName("cbDell").IsChecked
+        CreateUser   = $win.FindName("cbUser").IsChecked
+        PowerConfig  = $win.FindName("cbPowerSettings").IsChecked
     }
-    $tasks = $actions.GetEnumerator() | Where-Object { $_.Value }
-    $count = $tasks.Count
-    $step = 0
-    $summary = @()
-    $global:CancelRequested = $false
-
-    foreach ($task in $tasks) {
-        if ($global:CancelRequested) {
-            Update-ProgressUI $pbProgress.Value "Execution cancelled by user."
-            $summary += "❌ Execution cancelled by user."
-            break
-        }
-        $step++
-        $percent = [math]::Round(($step / $count) * 100)
-        try {
-            switch ($task.Key) {
-                'GroupPolicy' {
-                    Update-ProgressUI $percent 'Updating Group Policy...'
-                    Invoke-GroupPolicy
-                    $summary += "✔ Group Policy updated."
-                }
-                'ConfigMgr' {
-                    Update-ProgressUI $percent 'Running ConfigMgr Tasks...'
-                    Execute-Actions
-                    $summary += "✔ ConfigMgr tasks completed."
-                }
-                'DellUpdates' {
-                    Update-ProgressUI $percent 'Installing Dell Updates...'
-                    Run-DellUpdates
-                    $summary += "✔ Dell updates installed."
-                }
-                'CreateUser' {
-                    Update-ProgressUI $percent 'Creating Local User...'
-                    Create-User
-                    $summary += "✔ Local user created."
-                }
-                'PowerConfig' {
-                    Update-ProgressUI $percent 'Updating Power Settings...'
-                    Disable-Sleep
-                    $summary += "✔ Sleep disabled on AC power."
-                }
-            }
-        } catch {
-            $summary += "❌ $($task.Key) failed."
-            Update-ProgressUI $percent "ERROR: $($task.Key) failed."
-        }
-    }
-    if (-not $global:CancelRequested) {
-        Update-ProgressUI 100 'All selected actions completed!'
-    }
-    [System.Windows.MessageBox]::Show(($summary -join "`n"), "Execution Summary",
-        [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information) | Out-Null
+    $win.Close()
 })
 
-# Show the GUI window
+# Show GUI
 $win.Topmost = $true
 $win.Activate() | Out-Null
 $win.ShowDialog() | Out-Null
+$sel = $win.Tag
 
 Clear-Host
-
 
 # --- Execute tasks ---
 
