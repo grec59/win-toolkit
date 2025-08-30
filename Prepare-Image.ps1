@@ -277,7 +277,6 @@ if ($i -notmatch '^[Yy]$') { exit }
 Add-Type -AssemblyName PresentationFramework
 
 # Define enhanced XAML GUI
-# Define enhanced XAML GUI
 $xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         Title="Toolkit Action Selector"
@@ -288,45 +287,58 @@ $xaml = @"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         FontFamily="Segoe UI">
-    
+
     <DockPanel Margin="15">
-        <!-- Title -->
-        <StackPanel DockPanel.Dock="Top" Margin="0 0 0 15">
-            <TextBlock Text="Choose the actions you want to perform:"
-                       FontSize="14"
+        <!-- Title Section -->
+        <StackPanel DockPanel.Dock="Top" Margin="0 0 0 15" HorizontalAlignment="Center">
+            <TextBlock Text="Toolkit Action Selector"
+                       FontSize="18"
                        FontWeight="Bold"
+                       Foreground="#0078d7"
+                       HorizontalAlignment="Center"/>
+            <TextBlock Text="Choose actions to perform:"
+                       FontSize="12"
+                       FontStyle="Italic"
                        Foreground="#2b2b2b"
-                       Margin="0 0 0 10"/>
-            <Separator Margin="0 0 0 5"/>
+                       Margin="0 5 0 0"
+                       HorizontalAlignment="Center"/>
         </StackPanel>
 
-        <!-- Options -->
-        <StackPanel DockPanel.Dock="Top" Margin="10,0,0,0">
-            <CheckBox Name="cbGP"
-                      Content=" Update Group Policy"
-                      Margin="5"
-                      ToolTip="Run gpupdate /force to refresh computer and user policies."/>
-            
-            <CheckBox Name="cbCM"
-                      Content=" Run Configuration Manager Tasks"
-                      Margin="5"
-                      ToolTip="Trigger software/hardware inventory and application deployments."/>
-
-            <CheckBox Name="cbDell"
-                      Content=" Install Dell System Updates"
-                      Margin="5"
-                      ToolTip="Run Dell Command Update to check for BIOS, driver, and firmware updates."/>
-
-            <CheckBox Name="cbUser"
-                      Content=" Create a Local User Account"
-                      Margin="5"
-                      ToolTip="Add a new local account for troubleshooting."/>
-            
-            <CheckBox Name="cbPowerSettings"
-                      Content=" Disable Sleep on AC Power"
-                      Margin="5"
-                      ToolTip="Prevent system from entering sleep mode while plugged in."/>
-        </StackPanel>
+        <!-- Options inside Border box -->
+        <Border DockPanel.Dock="Top"
+                Margin="10,0,10,0"
+                Padding="10"
+                BorderBrush="#0078d7"
+                BorderThickness="2"
+                Background="White"
+                CornerRadius="4">
+            <StackPanel>
+                <CheckBox Name="cbGP"
+                          Content=" Update Group Policy"
+                          Margin="5"
+                          ToolTip="Run gpupdate /force to refresh computer and user policies."/>
+                
+                <CheckBox Name="cbCM"
+                          Content=" Run Configuration Manager Tasks"
+                          Margin="5"
+                          ToolTip="Trigger software/hardware inventory and application deployments."/>
+    
+                <CheckBox Name="cbDell"
+                          Content=" Install Dell System Updates"
+                          Margin="5"
+                          ToolTip="Run Dell Command Update to check for BIOS, driver, and firmware updates."/>
+    
+                <CheckBox Name="cbUser"
+                          Content=" Create a Local User Account"
+                          Margin="5"
+                          ToolTip="Add a new local account for troubleshooting."/>
+                
+                <CheckBox Name="cbPowerSettings"
+                          Content=" Disable Sleep on AC Power"
+                          Margin="5"
+                          ToolTip="Prevent system from entering sleep mode while plugged in."/>
+            </StackPanel>
+        </Border>
 
         <!-- Button Controls -->
         <StackPanel Orientation="Horizontal"
@@ -357,6 +369,7 @@ $xaml = @"
     </DockPanel>
 </Window>
 "@
+
 
 # Parse XAML
 $reader = (New-Object System.Xml.XmlNodeReader ([xml]$xaml))
