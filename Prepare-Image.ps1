@@ -424,4 +424,4 @@ if ($sel.PowerConfig) {
 Write-Host "Script execution complete. See:"
 Write-Host "$output" -Foregroundcolor Gray
 
-Start-Sleep 1
+Start-Sleep 1Add 
