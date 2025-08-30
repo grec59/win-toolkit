@@ -275,7 +275,12 @@ if ($i -notmatch '^[Yy]$') { exit }
 # --- Build GUI ---
 
 Add-Type -AssemblyName PresentationFramework
+Add-Type -AssemblyName PresentationCore
+Add-Type -AssemblyName System.Windows.Forms   # For DoEvents()
 
+$ToolVersion = "1.0"
+
+# --- XAML GUI ---
 $xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         Title="System Maintenance Tool"
@@ -300,6 +305,7 @@ $xaml = @"
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
+
     <!-- Header -->
     <StackPanel Grid.Row="0" Margin="0 0 0 15">
       <TextBlock Text="System Maintenance Actions" 
@@ -312,6 +318,7 @@ $xaml = @"
                  HorizontalAlignment="Center"
                  Margin="0 5 0 0"/>
     </StackPanel>
+
     <!-- Options + Progress -->
     <StackPanel Grid.Row="1">
       <GroupBox Header="Available Actions" FontWeight="SemiBold" Margin="0 0 0 10">
@@ -328,7 +335,7 @@ $xaml = @"
                     ToolTip="Prevents the machine from entering sleep mode while plugged in."/>
         </StackPanel>
       </GroupBox>
-      <!-- Progress Area -->
+
       <GroupBox Header="Execution Progress" FontWeight="SemiBold">
         <StackPanel Margin="12">
           <ProgressBar Name="pbProgress" Height="20" Minimum="0" Maximum="100" Foreground="#0078d7"/>
@@ -343,6 +350,7 @@ $xaml = @"
         </StackPanel>
       </GroupBox>
     </StackPanel>
+
     <!-- Buttons -->
     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0 15 0 5">
       <Button Name="btnOK" Width="90" Height="30" Margin="5" IsDefault="True" IsEnabled="False"
@@ -354,7 +362,8 @@ $xaml = @"
         Cancel
       </Button>
     </StackPanel>
-    <!-- Footer / Version Banner (bound dynamically later) -->
+
+    <!-- Footer -->
     <TextBlock Name="txtFooter" Grid.Row="3"
                HorizontalAlignment="Right"
                Foreground="Gray"
@@ -364,20 +373,31 @@ $xaml = @"
 </Window>
 "@
 
+# --- Load GUI ---
 $reader = (New-Object System.Xml.XmlNodeReader ([xml]$xaml))
-$win = [Windows.Markup.XamlReader]::Load($reader)
+$win     = [Windows.Markup.XamlReader]::Load($reader)
 
-# --- Capture GUI selections ---
-
+# --- Controls ---
 $btnOK      = $win.FindName('btnOK')
 $btnCancel  = $win.FindName('btnCancel')
 $pbProgress = $win.FindName('pbProgress')
 $lblStatus  = $win.FindName('lblStatus')
 $txtLog     = $win.FindName('txtLog')
 $footer     = $win.FindName('txtFooter')
+
 $checkBoxes = @('cbGP','cbCM','cbDell','cbUser','cbPowerSettings') | ForEach-Object { $win.FindName($_) }
 
-# Put this code block here to wire checkbox events:
+# Footer version
+$footer.Text = "System Maintenance Tool v$ToolVersion"
+
+# Cancel flag
+$global:CancelRequested = $false
+$btnCancel.Add_Click({ 
+    $global:CancelRequested = $true
+    Update-ProgressUI $pbProgress.Value "Cancellation requested by user..."
+})
+
+# Enable Proceed button only if any checkbox selected
 foreach ($cb in $checkBoxes) {
     $cb.Add_Checked({
         $btnOK.IsEnabled = ($checkBoxes | Where-Object { $_.IsChecked }).Count -gt 0
@@ -386,12 +406,92 @@ foreach ($cb in $checkBoxes) {
         $btnOK.IsEnabled = ($checkBoxes | Where-Object { $_.IsChecked }).Count -gt 0
     })
 }
-
-# Initialize button state in case some are pre-checked
 $btnOK.IsEnabled = ($checkBoxes | Where-Object { $_.IsChecked }).Count -gt 0
 
+# Helper: Update UI and log
+function Update-ProgressUI {
+    param([int]$percent, [string]$message)
+    $pbProgress.Value = $percent
+    $lblStatus.Text   = $message
+    $txtLog.AppendText("[$(Get-Date -Format 'HH:mm:ss')] $message`r`n")
+    $txtLog.ScrollToEnd()
+    [System.Windows.Forms.Application]::DoEvents() | Out-Null
+}
 
-# Show and activate the GUI window
+# Double click log copies content
+$txtLog.Add_MouseDoubleClick({
+    [System.Windows.Clipboard]::SetText($txtLog.Text)
+    [System.Windows.MessageBox]::Show("Log copied to clipboard.","Info",
+        [System.Windows.MessageBoxButton]::OK,[System.Windows.MessageBoxImage]::Information) | Out-Null
+})
+
+# Proceed button logic
+$btnOK.Add_Click({
+    $actions = @{
+        GroupPolicy  = $win.FindName('cbGP').IsChecked
+        ConfigMgr    = $win.FindName('cbCM').IsChecked
+        DellUpdates  = $win.FindName('cbDell').IsChecked
+        CreateUser   = $win.FindName('cbUser').IsChecked
+        PowerConfig  = $win.FindName('cbPowerSettings').IsChecked
+    }
+
+    $tasks = $actions.GetEnumerator() | Where-Object { $_.Value }
+    $count = $tasks.Count
+    $step = 0
+    $summary = @()
+    $global:CancelRequested = $false
+
+    foreach ($task in $tasks) {
+        if ($global:CancelRequested) {
+            Update-ProgressUI $pbProgress.Value "Execution cancelled by user."
+            $summary += "❌ Execution cancelled by user."
+            break
+        }
+        $step++
+        $percent = [math]::Round(($step / $count) * 100)
+
+        try {
+            switch ($task.Key) {
+                'GroupPolicy' {
+                    Update-ProgressUI $percent 'Updating Group Policy...'
+                    Invoke-GroupPolicy
+                    $summary += "✔ Group Policy updated."
+                }
+                'ConfigMgr' {
+                    Update-ProgressUI $percent 'Running ConfigMgr Tasks...'
+                    Execute-Actions
+                    $summary += "✔ ConfigMgr tasks completed."
+                }
+                'DellUpdates' {
+                    Update-ProgressUI $percent 'Installing Dell Updates...'
+                    Run-DellUpdates
+                    $summary += "✔ Dell updates installed."
+                }
+                'CreateUser' {
+                    Update-ProgressUI $percent 'Creating Local User...'
+                    Create-User
+                    $summary += "✔ Local user created."
+                }
+                'PowerConfig' {
+                    Update-ProgressUI $percent 'Updating Power Settings...'
+                    Disable-Sleep
+                    $summary += "✔ Sleep disabled on AC power."
+                }
+            }
+        }
+        catch {
+            $summary += "❌ $($task.Key) failed."
+            Update-ProgressUI $percent "ERROR: $($task.Key) failed."
+        }
+    }
+    if (-not $global:CancelRequested) {
+        Update-ProgressUI 100 'All selected actions completed!'
+    }
+    [System.Windows.MessageBox]::Show(($summary -join "`n"),"Execution Summary",
+        [System.Windows.MessageBoxButton]::OK,[System.Windows.MessageBoxImage]::Information) | Out-Null
+})
+
+# Show Window
 $win.Topmost = $true
 $win.Activate() | Out-Null
 $win.ShowDialog() | Out-Null
