@@ -319,7 +319,7 @@ $xaml = @"
                  Margin="0 5 0 0"/>
     </StackPanel>
 
-    <!-- Options + Progress -->
+    <!-- Options -->
     <StackPanel Grid.Row="1">
       <GroupBox Header="Available Actions" FontWeight="SemiBold" Margin="0 0 0 10">
         <StackPanel Margin="12">
@@ -336,6 +336,7 @@ $xaml = @"
         </StackPanel>
       </GroupBox>
 
+      <!-- Progress Area -->
       <GroupBox Header="Execution Progress" FontWeight="SemiBold">
         <StackPanel Margin="12">
           <ProgressBar Name="pbProgress" Height="20" Minimum="0" Maximum="100" Foreground="#0078d7"/>
@@ -390,14 +391,14 @@ $checkBoxes = @('cbGP','cbCM','cbDell','cbUser','cbPowerSettings') | ForEach-Obj
 # Footer version
 $footer.Text = "System Maintenance Tool v$ToolVersion"
 
-# Cancel flag
+# Cancel flag and handlers
 $global:CancelRequested = $false
 $btnCancel.Add_Click({ 
     $global:CancelRequested = $true
     Update-ProgressUI $pbProgress.Value "Cancellation requested by user..."
 })
 
-# Enable Proceed button only if any checkbox selected
+# Enable Proceed button only if any checkbox is selected
 foreach ($cb in $checkBoxes) {
     $cb.Add_Checked({
         $btnOK.IsEnabled = ($checkBoxes | Where-Object { $_.IsChecked }).Count -gt 0
@@ -408,7 +409,7 @@ foreach ($cb in $checkBoxes) {
 }
 $btnOK.IsEnabled = ($checkBoxes | Where-Object { $_.IsChecked }).Count -gt 0
 
-# Helper: Update UI and log
+# Helper function to update progress and log
 function Update-ProgressUI {
     param([int]$percent, [string]$message)
     $pbProgress.Value = $percent
@@ -418,7 +419,30 @@ function Update-ProgressUI {
     [System.Windows.Forms.Application]::DoEvents() | Out-Null
 }
 
-# Double click log copies content
+# Override Write-Host to output to GUI and console
+$originalWriteHost = (Get-Command Write-Host).Definition
+function Write-Host {
+    param(
+        [Parameter(ValueFromRemainingArguments = $true)]
+        $Args
+    )
+    # Compose the text string from arguments
+    $text = -join ($Args -join " ")
+    # Append to GUI text box in thread-safe way
+    if ($txtLog.Dispatcher.CheckAccess()) {
+        $txtLog.AppendText("[$(Get-Date -Format 'HH:mm:ss')] $text`r`n")
+        $txtLog.ScrollToEnd()
+    } else {
+        $txtLog.Dispatcher.Invoke({
+            $txtLog.AppendText("[$(Get-Date -Format 'HH:mm:ss')] $text`r`n")
+            $txtLog.ScrollToEnd()
+        })
+    }
+    # Also call original Write-Host for console output
+    Microsoft.PowerShell.Utility\Write-Host @Args
+}
+
+# Double-click on log copies text to clipboard
 $txtLog.Add_MouseDoubleClick({
     [System.Windows.Clipboard]::SetText($txtLog.Text)
     [System.Windows.MessageBox]::Show("Log copied to clipboard.","Info",
@@ -434,7 +458,6 @@ $btnOK.Add_Click({
         CreateUser   = $win.FindName('cbUser').IsChecked
         PowerConfig  = $win.FindName('cbPowerSettings').IsChecked
     }
-
     $tasks = $actions.GetEnumerator() | Where-Object { $_.Value }
     $count = $tasks.Count
     $step = 0
@@ -449,7 +472,6 @@ $btnOK.Add_Click({
         }
         $step++
         $percent = [math]::Round(($step / $count) * 100)
-
         try {
             switch ($task.Key) {
                 'GroupPolicy' {
@@ -478,8 +500,7 @@ $btnOK.Add_Click({
                     $summary += "✔ Sleep disabled on AC power."
                 }
             }
-        }
-        catch {
+        } catch {
             $summary += "❌ $($task.Key) failed."
             Update-ProgressUI $percent "ERROR: $($task.Key) failed."
         }
@@ -487,16 +508,17 @@ $btnOK.Add_Click({
     if (-not $global:CancelRequested) {
         Update-ProgressUI 100 'All selected actions completed!'
     }
-    [System.Windows.MessageBox]::Show(($summary -join "`n"),"Execution Summary",
-        [System.Windows.MessageBoxButton]::OK,[System.Windows.MessageBoxImage]::Information) | Out-Null
+    [System.Windows.MessageBox]::Show(($summary -join "`n"), "Execution Summary",
+        [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information) | Out-Null
 })
 
-# Show Window
+# Show the GUI window
 $win.Topmost = $true
 $win.Activate() | Out-Null
 $win.ShowDialog() | Out-Null
 
 Clear-Host
+
 
 # --- Execute tasks ---
 
