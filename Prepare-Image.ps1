@@ -274,7 +274,6 @@ if ($i -notmatch '^[Yy]$') { exit }
 
 # --- Build GUI ---
 
-# --- Build GUI ---
 Add-Type -AssemblyName PresentationFramework
 
 # Define enhanced XAML GUI
@@ -288,16 +287,22 @@ $xaml = @"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         FontFamily="Segoe UI">
-    
+
     <DockPanel Margin="15">
-        <!-- Title -->
-        <StackPanel DockPanel.Dock="Top" Margin="0 0 0 15">
-            <TextBlock Text="Choose the actions you want to perform:"
-                       FontSize="14"
+        <!-- Title Section -->
+        <StackPanel DockPanel.Dock="Top" Margin="0 0 0 15" HorizontalAlignment="Center">
+            <TextBlock Text="Toolkit Action Selector"
+                       FontSize="18"
                        FontWeight="Bold"
+                       Foreground="#0078d7"
+                       HorizontalAlignment="Center"/>
+            <TextBlock Text="choose actions to perform"
+                       FontSize="12"
+                       FontStyle="Italic"
                        Foreground="#2b2b2b"
-                       Margin="0 0 0 10"/>
-            <Separator Margin="0 0 0 5"/>
+                       Margin="0 5 0 0"
+                       HorizontalAlignment="Center"/>
+            <Separator Margin="0 10 0 5" Width="380"/>
         </StackPanel>
 
         <!-- Options -->
