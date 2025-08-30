@@ -92,29 +92,78 @@ function Invoke-GroupPolicy {
 }
 
 function Execute-Actions {
-    Write-Host "Running Configuration Actions..." -ForegroundColor Cyan
-    $SCCMActions = @(
-        [PSCustomObject]@{ Guid = "{00000000-0000-0000-0000-000000000021}"; Name = "Machine policy retrieval Cycle" },
-        [PSCustomObject]@{ Guid = "{00000000-0000-0000-0000-000000000022}"; Name = "Machine policy evaluation cycle" },
-        [PSCustomObject]@{ Guid = "{00000000-0000-0000-0000-000000000001}"; Name = "Hardware inventory cycle" },
-        [PSCustomObject]@{ Guid = "{00000000-0000-0000-0000-000000000002}"; Name = "Software inventory cycle" },
-        [PSCustomObject]@{ Guid = "{00000000-0000-0000-0000-000000000003}"; Name = "Discovery Data Collection Cycle" },
-        [PSCustomObject]@{ Guid = "{00000000-0000-0000-0000-000000000113}"; Name = "Software updates scan cycle" },
-        [PSCustomObject]@{ Guid = "{00000000-0000-0000-0000-000000000114}"; Name = "Software updates deployment evaluation cycle" },
-        [PSCustomObject]@{ Guid = "{00000000-0000-0000-0000-000000000031}"; Name = "Software metering usage report cycle" },
-        [PSCustomObject]@{ Guid = "{00000000-0000-0000-0000-000000000121}"; Name = "Application deployment evaluation cycle" },
-        [PSCustomObject]@{ Guid = "{00000000-0000-0000-0000-000000000032}"; Name = "Windows installer source list update cycle" },
-        [PSCustomObject]@{ Guid = "{00000000-0000-0000-0000-000000000010}"; Name = "File collection" }
+    Add-Type -AssemblyName PresentationFramework
+
+    # Define the actions as PSCustomObjects
+    $actionsList = @(
+        [PSCustomObject]@{ Name = "Machine policy retrieval cycle"; Guid = "{00000000-0000-0000-0000-000000000021}"; IsChecked = $false },
+        [PSCustomObject]@{ Name = "Machine policy evaluation cycle"; Guid = "{00000000-0000-0000-0000-000000000022}"; IsChecked = $false },
+        [PSCustomObject]@{ Name = "Hardware inventory cycle"; Guid = "{00000000-0000-0000-0000-000000000001}"; IsChecked = $false },
+        [PSCustomObject]@{ Name = "Software inventory cycle"; Guid = "{00000000-0000-0000-0000-000000000002}"; IsChecked = $false },
+        [PSCustomObject]@{ Name = "Discovery data collection cycle"; Guid = "{00000000-0000-0000-0000-000000000003}"; IsChecked = $false },
+        [PSCustomObject]@{ Name = "Software updates scan cycle"; Guid = "{00000000-0000-0000-0000-000000000113}"; IsChecked = $false },
+        [PSCustomObject]@{ Name = "Software updates deployment evaluation cycle"; Guid = "{00000000-0000-0000-0000-000000000114}"; IsChecked = $false },
+        [PSCustomObject]@{ Name = "Software metering usage report cycle"; Guid = "{00000000-0000-0000-0000-000000000031}"; IsChecked = $false },
+        [PSCustomObject]@{ Name = "Application deployment evaluation cycle"; Guid = "{00000000-0000-0000-0000-000000000121}"; IsChecked = $false },
+        [PSCustomObject]@{ Name = "Windows installer source list update cycle"; Guid = "{00000000-0000-0000-0000-000000000032}"; IsChecked = $false },
+        [PSCustomObject]@{ Name = "File collection"; Guid = "{00000000-0000-0000-0000-000000000010}"; IsChecked = $false }
     )
 
-    foreach ($action in $SCCMActions) {
+    # Build XAML
+    $xaml = @"
+<Window xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' Title='Select ConfigMgr Actions' Height='Auto' Width='400' SizeToContent='Height' WindowStartupLocation='CenterScreen'>
+  <StackPanel Margin='10'>
+    <TextBlock FontWeight='Bold' Margin='0 0 0 10'>Choose actions to perform:</TextBlock>
+    <Button Name='btnSelectAll' Width='100' Margin='0 0 0 10'>Select All</Button>
+    <ItemsControl Name='icActions'>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate>
+          <CheckBox Content='{Binding Name}' IsChecked='{Binding IsChecked, Mode=TwoWay}' />
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <StackPanel Orientation='Horizontal' HorizontalAlignment='Right' Margin='0 15 0 0'>
+      <Button Name='btnOK' Width='75' Margin='5' IsDefault='True'>Proceed</Button>
+      <Button Width='75' Margin='5' IsCancel='True'>Cancel</Button>
+    </StackPanel>
+  </StackPanel>
+</Window>
+"@
+
+    $reader = (New-Object System.Xml.XmlNodeReader ([xml]$xaml))
+    $win = [Windows.Markup.XamlReader]::Load($reader)
+
+    # Bind the actions
+    $ic = $win.FindName('icActions')
+    $ic.ItemsSource = $actionsList
+
+    # Select All button
+    $btnSelectAll = $win.FindName('btnSelectAll')
+    $btnSelectAll.Add_Click({
+        foreach ($item in $actionsList) { $item.IsChecked = $true }
+        $ic.Items.Refresh()  # Refresh to show changes
+    })
+
+    # Proceed button
+    $btnOK = $win.FindName('btnOK')
+    $btnOK.Add_Click({
+        $win.Tag = $actionsList | Where-Object { $_.IsChecked }
+        $win.Close()
+    })
+
+    $win.Topmost = $true
+    $win.ShowDialog() | Out-Null
+
+    $chosen = $win.Tag
+    if (-not $chosen) { return }
+
+    # Execute selected actions
+    foreach ($action in $chosen) {
         try {
-            Invoke-WMIMethod -Namespace root\ccm -Class SMS_CLIENT -Name TriggerSchedule -ArgumentList $action.Guid -ErrorAction Stop | Out-Null
-            Write-Host "SUCCESS: $($action.Name)" -ForegroundColor Green
-            "SUCCESS: $($action.Name)" | Out-File -FilePath $output -Encoding utf8 -Append
+            Invoke-WmiMethod -Namespace root\ccm -Class SMS_CLIENT -Name TriggerSchedule -ArgumentList $action.Guid -ErrorAction Stop | Out-Null
+            Write-Host "Triggered ConfigMgr action: $($action.Name)" -Level SUCCESS
         } catch {
-            Write-Host "FAIL: $($action.Name) $($_.Exception.Message)" -ForegroundColor Red
-            "FAIL: $($action.Name) $($_.Exception.Message)" | Out-File -FilePath $output -Encoding utf8 -Append
+            Write-Host "Failed ConfigMgr action: $($action.Name) -> $($_.Exception.Message)" -Level FAIL
         }
         Start-Sleep -Seconds 2
     }
