@@ -278,91 +278,90 @@ Add-Type -AssemblyName PresentationFramework
 
 # Define enhanced XAML GUI
 $xaml = @"
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        Title="Toolkit Action Selector"
-        Height="320"
-        Width="420"
-        Background="#f2f5f7"
-        WindowStartupLocation="CenterScreen"
-        WindowStyle="SingleBorderWindow"
-        ResizeMode="NoResize"
-        FontFamily="Segoe UI">
+<Window xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\"
+        Title=\"Toolkit Action Selector\"
+        SizeToContent=\"WidthAndHeight\"
+        ResizeMode=\"CanResize\"
+        Background=\"#f2f5f7\"
+        WindowStartupLocation=\"CenterScreen\"
+        WindowStyle=\"SingleBorderWindow\"
+        FontFamily=\"Segoe UI\">
 
-    <DockPanel Margin="15">
+    <DockPanel Margin=\"15\">
         <!-- Title Section -->
-        <StackPanel DockPanel.Dock="Top" Margin="0 0 0 15" HorizontalAlignment="Center">
-            <TextBlock Text="Toolkit Action Selector"
-                       FontSize="18"
-                       FontWeight="Bold"
-                       Foreground="#0078d7"
-                       HorizontalAlignment="Center"/>
-            <TextBlock Text="Choose actions to perform:"
-                       FontSize="12"
-                       FontStyle="Italic"
-                       Foreground="#2b2b2b"
-                       Margin="0 5 0 0"
-                       HorizontalAlignment="Center"/>
+        <StackPanel DockPanel.Dock=\"Top\" Margin=\"0 0 0 15\" HorizontalAlignment=\"Center\">
+            <TextBlock Text=\"Toolkit Action Selector\"
+                       FontSize=\"18\"
+                       FontWeight=\"Bold\"
+                       Foreground=\"#0078d7\"
+                       HorizontalAlignment=\"Center\"/>
+            <TextBlock Text=\"Choose actions to perform:\"
+                       FontSize=\"12\"
+                       FontStyle=\"Italic\"
+                       Foreground=\"#2b2b2b\"
+                       Margin=\"0 5 0 0\"
+                       HorizontalAlignment=\"Center\"/>
         </StackPanel>
 
-        <!-- Options inside Border box -->
-        <Border DockPanel.Dock="Top"
-                Margin="10,0,10,0"
-                Padding="10"
-                BorderBrush="#0078d7"
-                BorderThickness="2"
-                Background="White"
-                CornerRadius="4">
+        <!-- Grouped Action Items in Border -->
+        <Border DockPanel.Dock=\"Top\"
+                Margin=\"10,0,10,0\"
+                Padding=\"10\"
+                BorderBrush=\"#0078d7\"
+                BorderThickness=\"2\"
+                Background=\"White\"
+                CornerRadius=\"4\">
             <StackPanel>
-                <CheckBox Name="cbGP"
-                          Content=" Update Group Policy"
-                          Margin="5"
-                          ToolTip="Run gpupdate /force to refresh computer and user policies."/>
-                
-                <CheckBox Name="cbCM"
-                          Content=" Run Configuration Manager Tasks"
-                          Margin="5"
-                          ToolTip="Trigger software/hardware inventory and application deployments."/>
-    
-                <CheckBox Name="cbDell"
-                          Content=" Install Dell System Updates"
-                          Margin="5"
-                          ToolTip="Run Dell Command Update to check for BIOS, driver, and firmware updates."/>
-    
-                <CheckBox Name="cbUser"
-                          Content=" Create a Local User Account"
-                          Margin="5"
-                          ToolTip="Add a new local account for troubleshooting."/>
-                
-                <CheckBox Name="cbPowerSettings"
-                          Content=" Disable Sleep on AC Power"
-                          Margin="5"
-                          ToolTip="Prevent system from entering sleep mode while plugged in."/>
+                <GroupBox Header=\"Policy Updates\" Margin=\"5\">
+                    <StackPanel>
+                        <CheckBox Name=\"cbGP\" Content=\"Update Group Policy\" Margin=\"5\" ToolTip=\"Run gpupdate /force to refresh computer and user policies.\" />
+                        <CheckBox Name=\"cbCM\" Content=\"Run Configuration Manager Tasks\" Margin=\"5\" ToolTip=\"Trigger software/hardware inventory and application deployments.\" />
+                    </StackPanel>
+                </GroupBox>
+
+                <GroupBox Header=\"System Updates\" Margin=\"5\">
+                    <StackPanel>
+                        <CheckBox Name=\"cbDell\" Content=\"Install Dell System Updates\" Margin=\"5\" ToolTip=\"Run Dell Command Update to check for BIOS, driver, and firmware updates.\" />
+                    </StackPanel>
+                </GroupBox>
+
+                <GroupBox Header=\"User Management\" Margin=\"5\">
+                    <StackPanel>
+                        <CheckBox Name=\"cbUser\" Content=\"Create a Local User Account\" Margin=\"5\" ToolTip=\"Add a new local account for troubleshooting.\" />
+                    </StackPanel>
+                </GroupBox>
+
+                <GroupBox Header=\"Power Settings\" Margin=\"5\">
+                    <StackPanel>
+                        <CheckBox Name=\"cbPowerSettings\" Content=\"Disable Sleep on AC Power\" Margin=\"5\" ToolTip=\"Prevent system from entering sleep mode while plugged in.\" />
+                    </StackPanel>
+                </GroupBox>
             </StackPanel>
         </Border>
 
         <!-- Button Controls -->
-        <StackPanel Orientation="Horizontal"
-                    DockPanel.Dock="Bottom"
-                    HorizontalAlignment="Right"
-                    Margin="0,20,0,0">
-            <Button Name="btnOK"
-                    Width="90"
-                    Height="28"
-                    Margin="5"
-                    IsDefault="True"
-                    Background="#0078d7"
-                    Foreground="White"
-                    FontWeight="SemiBold"
-                    BorderBrush="#005a9e">
+        <StackPanel Orientation=\"Horizontal\"
+                    DockPanel.Dock=\"Bottom\"
+                    HorizontalAlignment=\"Right\"
+                    Margin=\"0,20,0,0\">
+            <Button Name=\"btnOK\"
+                    Width=\"90\"
+                    Height=\"28\"
+                    Margin=\"5\"
+                    IsDefault=\"True\"
+                    Background=\"#0078d7\"
+                    Foreground=\"White\"
+                    FontWeight=\"SemiBold\"
+                    BorderBrush=\"#005a9e\">
                 Proceed
             </Button>
-            <Button Width="90"
-                    Height="28"
-                    Margin="5"
-                    IsCancel="True"
-                    Background="#cccccc"
-                    Foreground="Black"
-                    BorderBrush="#999999">
+            <Button Width=\"90\"
+                    Height=\"28\"
+                    Margin=\"5\"
+                    IsCancel=\"True\"
+                    Background=\"#cccccc\"
+                    Foreground=\"Black\"
+                    BorderBrush=\"#999999\">
                 Cancel
             </Button>
         </StackPanel>
