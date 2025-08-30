@@ -285,11 +285,13 @@ $xaml = @"
         Background=\"#f2f5f7\"
         WindowStartupLocation=\"CenterScreen\"
         WindowStyle=\"SingleBorderWindow\"
-        FontFamily=\"Segoe UI\">
+        FontFamily=\"Segoe UI\"
+        MinWidth=\"400\"
+        MinHeight=\"300\">
 
-    <DockPanel Margin=\"15\">
+    <Grid Margin=\"15\" RowDefinitions=\"Auto,*,Auto\">
         <!-- Title Section -->
-        <StackPanel DockPanel.Dock=\"Top\" Margin=\"0 0 0 15\" HorizontalAlignment=\"Center\">
+        <StackPanel Grid.Row=\"0\" Margin=\"0 0 0 15\" HorizontalAlignment=\"Center\">
             <TextBlock Text=\"Toolkit Action Selector\"
                        FontSize=\"18\"
                        FontWeight=\"Bold\"
@@ -303,45 +305,46 @@ $xaml = @"
                        HorizontalAlignment=\"Center\"/>
         </StackPanel>
 
-        <!-- Grouped Action Items in Border -->
-        <Border DockPanel.Dock=\"Top\"
+        <!-- Scrollable Grouped Action Items inside Border -->
+        <Border Grid.Row=\"1\"
                 Margin=\"10,0,10,0\"
                 Padding=\"10\"
                 BorderBrush=\"#0078d7\"
                 BorderThickness=\"2\"
                 Background=\"White\"
                 CornerRadius=\"4\">
-            <StackPanel>
-                <GroupBox Header=\"Policy Updates\" Margin=\"5\">
-                    <StackPanel>
-                        <CheckBox Name=\"cbGP\" Content=\"Update Group Policy\" Margin=\"5\" ToolTip=\"Run gpupdate /force to refresh computer and user policies.\" />
-                        <CheckBox Name=\"cbCM\" Content=\"Run Configuration Manager Tasks\" Margin=\"5\" ToolTip=\"Trigger software/hardware inventory and application deployments.\" />
-                    </StackPanel>
-                </GroupBox>
+            <ScrollViewer VerticalScrollBarVisibility=\"Auto\">
+                <StackPanel MinWidth=\"350\">
+                    <GroupBox Header=\"Policy Updates\" Margin=\"5\">
+                        <StackPanel>
+                            <CheckBox Name=\"cbGP\" Content=\"Update Group Policy\" Margin=\"5\" ToolTip=\"Run gpupdate /force to refresh computer and user policies.\" />
+                            <CheckBox Name=\"cbCM\" Content=\"Run Configuration Manager Tasks\" Margin=\"5\" ToolTip=\"Trigger software/hardware inventory and application deployments.\" />
+                        </StackPanel>
+                    </GroupBox>
 
-                <GroupBox Header=\"System Updates\" Margin=\"5\">
-                    <StackPanel>
-                        <CheckBox Name=\"cbDell\" Content=\"Install Dell System Updates\" Margin=\"5\" ToolTip=\"Run Dell Command Update to check for BIOS, driver, and firmware updates.\" />
-                    </StackPanel>
-                </GroupBox>
+                    <GroupBox Header=\"System Updates\" Margin=\"5\">
+                        <StackPanel>
+                            <CheckBox Name=\"cbDell\" Content=\"Install Dell System Updates\" Margin=\"5\" ToolTip=\"Run Dell Command Update to check for BIOS, driver, and firmware updates.\" />
+                        </StackPanel>
+                    </GroupBox>
 
-                <GroupBox Header=\"User Management\" Margin=\"5\">
-                    <StackPanel>
-                        <CheckBox Name=\"cbUser\" Content=\"Create a Local User Account\" Margin=\"5\" ToolTip=\"Add a new local account for troubleshooting.\" />
-                    </StackPanel>
-                </GroupBox>
+                    <GroupBox Header=\"User Management\" Margin=\"5\">
+                        <StackPanel>
+                            <CheckBox Name=\"cbUser\" Content=\"Create a Local User Account\" Margin=\"5\" ToolTip=\"Add a new local account for troubleshooting.\" />
+                        </StackPanel>
+                    </GroupBox>
 
-                <GroupBox Header=\"Power Settings\" Margin=\"5\">
-                    <StackPanel>
-                        <CheckBox Name=\"cbPowerSettings\" Content=\"Disable Sleep on AC Power\" Margin=\"5\" ToolTip=\"Prevent system from entering sleep mode while plugged in.\" />
-                    </StackPanel>
-                </GroupBox>
-            </StackPanel>
+                    <GroupBox Header=\"Power Settings\" Margin=\"5\">
+                        <StackPanel>
+                            <CheckBox Name=\"cbPowerSettings\" Content=\"Disable Sleep on AC Power\" Margin=\"5\" ToolTip=\"Prevent system from entering sleep mode while plugged in.\" />
+                        </StackPanel>
+                    </GroupBox>
+                </StackPanel>
+            </ScrollViewer>
         </Border>
 
         <!-- Button Controls -->
-        <StackPanel Orientation=\"Horizontal\"
-                    DockPanel.Dock=\"Bottom\"
+        <StackPanel Grid.Row=\"2\" Orientation=\"Horizontal\"
                     HorizontalAlignment=\"Right\"
                     Margin=\"0,20,0,0\">
             <Button Name=\"btnOK\"
@@ -365,7 +368,7 @@ $xaml = @"
                 Cancel
             </Button>
         </StackPanel>
-    </DockPanel>
+    </Grid>
 </Window>
 "@
 
