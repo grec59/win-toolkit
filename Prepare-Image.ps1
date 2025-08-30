@@ -306,10 +306,10 @@ $xaml = @"
 
         <!-- Options inside Border box -->
         <Border DockPanel.Dock="Top"
-                Margin="10,0,0,0"
+                Margin="10,0,10,0"
                 Padding="10"
-                BorderBrush="#c0c0c0"
-                BorderThickness="1"
+                BorderBrush="#0078d7"
+                BorderThickness="2"
                 Background="White"
                 CornerRadius="4">
             <StackPanel>
