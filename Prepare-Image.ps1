@@ -304,33 +304,41 @@ $xaml = @"
                        HorizontalAlignment="Center"/>
         </StackPanel>
 
-        <!-- Options -->
-        <StackPanel DockPanel.Dock="Top" Margin="10,0,0,0">
-            <CheckBox Name="cbGP"
-                      Content=" Update Group Policy"
-                      Margin="5"
-                      ToolTip="Run gpupdate /force to refresh computer and user policies."/>
-            
-            <CheckBox Name="cbCM"
-                      Content=" Run Configuration Manager Tasks"
-                      Margin="5"
-                      ToolTip="Trigger software/hardware inventory and application deployments."/>
-
-            <CheckBox Name="cbDell"
-                      Content=" Install Dell System Updates"
-                      Margin="5"
-                      ToolTip="Run Dell Command Update to check for BIOS, driver, and firmware updates."/>
-
-            <CheckBox Name="cbUser"
-                      Content=" Create a Local User Account"
-                      Margin="5"
-                      ToolTip="Add a new local account for troubleshooting."/>
-            
-            <CheckBox Name="cbPowerSettings"
-                      Content=" Disable Sleep on AC Power"
-                      Margin="5"
-                      ToolTip="Prevent system from entering sleep mode while plugged in."/>
-        </StackPanel>
+        <!-- Options inside Border box -->
+        <Border DockPanel.Dock="Top"
+                Margin="10,0,0,0"
+                Padding="10"
+                BorderBrush="#c0c0c0"
+                BorderThickness="1"
+                Background="White"
+                CornerRadius="4">
+            <StackPanel>
+                <CheckBox Name="cbGP"
+                          Content=" Update Group Policy"
+                          Margin="5"
+                          ToolTip="Run gpupdate /force to refresh computer and user policies."/>
+                
+                <CheckBox Name="cbCM"
+                          Content=" Run Configuration Manager Tasks"
+                          Margin="5"
+                          ToolTip="Trigger software/hardware inventory and application deployments."/>
+    
+                <CheckBox Name="cbDell"
+                          Content=" Install Dell System Updates"
+                          Margin="5"
+                          ToolTip="Run Dell Command Update to check for BIOS, driver, and firmware updates."/>
+    
+                <CheckBox Name="cbUser"
+                          Content=" Create a Local User Account"
+                          Margin="5"
+                          ToolTip="Add a new local account for troubleshooting."/>
+                
+                <CheckBox Name="cbPowerSettings"
+                          Content=" Disable Sleep on AC Power"
+                          Margin="5"
+                          ToolTip="Prevent system from entering sleep mode while plugged in."/>
+            </StackPanel>
+        </Border>
 
         <!-- Button Controls -->
         <StackPanel Orientation="Horizontal"
