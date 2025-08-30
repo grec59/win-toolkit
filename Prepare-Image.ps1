@@ -274,6 +274,7 @@ if ($i -notmatch '^[Yy]$') { exit }
 
 # --- Build GUI ---
 
+# --- Build GUI ---
 Add-Type -AssemblyName PresentationFramework
 
 # Define enhanced XAML GUI
@@ -304,27 +305,27 @@ $xaml = @"
             <CheckBox Name="cbGP"
                       Content=" Update Group Policy"
                       Margin="5"
-                      ToolTip="Run gpupdate /force to refresh computer and user policies."/>
+                      ToolTip="Run gpupdate to refresh computer policies on-demand."/>
             
             <CheckBox Name="cbCM"
                       Content=" Run Configuration Manager Tasks"
                       Margin="5"
-                      ToolTip="Trigger software/hardware inventory and application deployments."/>
+                      ToolTip="Invoke inventory cycles and application deployments."/>
 
             <CheckBox Name="cbDell"
                       Content=" Install Dell System Updates"
                       Margin="5"
-                      ToolTip="Run Dell Command Update to check for BIOS, driver, and firmware updates."/>
+                      ToolTip="Run Dell Command Update to check for system updates."/>
 
             <CheckBox Name="cbUser"
                       Content=" Create a Local User Account"
                       Margin="5"
-                      ToolTip="Add a new local account for troubleshooting."/>
+                      ToolTip="Add a new standard local account."/>
             
             <CheckBox Name="cbPowerSettings"
                       Content=" Disable Sleep on AC Power"
                       Margin="5"
-                      ToolTip="Prevent system from entering sleep mode while plugged in."/>
+                      ToolTip="Prevent system invoking sleep mode while plugged in."/>
         </StackPanel>
 
         <!-- Button Controls -->
@@ -341,7 +342,6 @@ $xaml = @"
                     Foreground="White"
                     FontWeight="SemiBold"
                     BorderBrush="#005a9e"
-                    ToolTip="Proceed with the selected actions.">
                 Proceed
             </Button>
             <Button Width="90"
@@ -351,7 +351,6 @@ $xaml = @"
                     Background="#cccccc"
                     Foreground="Black"
                     BorderBrush="#999999"
-                    ToolTip="Cancel and close this window.">
                 Cancel
             </Button>
         </StackPanel>
