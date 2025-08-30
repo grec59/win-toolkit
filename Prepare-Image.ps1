@@ -341,8 +341,7 @@ $xaml = @"
                     Background="#0078d7"
                     Foreground="White"
                     FontWeight="SemiBold"
-                    BorderBrush="#005a9e"
-                    ToolTip="Proceed with the selected actions.">
+                    BorderBrush="#005a9e">
                 Proceed
             </Button>
             <Button Width="90"
@@ -351,8 +350,7 @@ $xaml = @"
                     IsCancel="True"
                     Background="#cccccc"
                     Foreground="Black"
-                    BorderBrush="#999999"
-                    ToolTip="Cancel and close this window.">
+                    BorderBrush="#999999">
                 Cancel
             </Button>
         </StackPanel>
