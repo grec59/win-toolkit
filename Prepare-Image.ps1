@@ -302,7 +302,6 @@ $xaml = @"
                        Foreground="#2b2b2b"
                        Margin="0 5 0 0"
                        HorizontalAlignment="Center"/>
-            <Separator Margin="0 10 0 5" Width="380"/>
         </StackPanel>
 
         <!-- Options -->
