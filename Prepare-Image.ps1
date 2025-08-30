@@ -369,22 +369,32 @@ $win = [Windows.Markup.XamlReader]::Load($reader)
 
 # --- Capture GUI selections ---
 
-$btnOK = $win.FindName('btnOK')
-$btnOK.Add_Click({
-    $win.Tag = @{
-        GroupPolicy = $win.FindName('cbGP').IsChecked
-        ConfigMgr  = $win.FindName('cbCM').IsChecked
-        DellUpdates = $win.FindName('cbDell').IsChecked
-        CreateUser = $win.FindName('cbUser').IsChecked
-        PowerConfig = $win.FindName('cbPowerSettings').IsChecked
-    }
-    $win.Close()
-})
+$btnOK      = $win.FindName('btnOK')
+$btnCancel  = $win.FindName('btnCancel')
+$pbProgress = $win.FindName('pbProgress')
+$lblStatus  = $win.FindName('lblStatus')
+$txtLog     = $win.FindName('txtLog')
+$footer     = $win.FindName('txtFooter')
+$checkBoxes = @('cbGP','cbCM','cbDell','cbUser','cbPowerSettings') | ForEach-Object { $win.FindName($_) }
 
+# Put this code block here to wire checkbox events:
+foreach ($cb in $checkBoxes) {
+    $cb.Add_Checked({
+        $btnOK.IsEnabled = ($checkBoxes | Where-Object { $_.IsChecked }).Count -gt 0
+    })
+    $cb.Add_Unchecked({
+        $btnOK.IsEnabled = ($checkBoxes | Where-Object { $_.IsChecked }).Count -gt 0
+    })
+}
+
+# Initialize button state in case some are pre-checked
+$btnOK.IsEnabled = ($checkBoxes | Where-Object { $_.IsChecked }).Count -gt 0
+
+
+# Show and activate the GUI window
 $win.Topmost = $true
-$win.Activate() | out-null
-$win.ShowDialog() | out-null
-$sel = $win.Tag
+$win.Activate() | Out-Null
+$win.ShowDialog() | Out-Null
 
 Clear-Host
 
