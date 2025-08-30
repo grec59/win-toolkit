@@ -305,27 +305,27 @@ $xaml = @"
             <CheckBox Name="cbGP"
                       Content=" Update Group Policy"
                       Margin="5"
-                      ToolTip="Run gpupdate to refresh computer policies on-demand."/>
+                      ToolTip="Run gpupdate /force to refresh computer and user policies."/>
             
             <CheckBox Name="cbCM"
                       Content=" Run Configuration Manager Tasks"
                       Margin="5"
-                      ToolTip="Invoke inventory cycles and application deployments."/>
+                      ToolTip="Trigger software/hardware inventory and application deployments."/>
 
             <CheckBox Name="cbDell"
                       Content=" Install Dell System Updates"
                       Margin="5"
-                      ToolTip="Run Dell Command Update to check for system updates."/>
+                      ToolTip="Run Dell Command Update to check for BIOS, driver, and firmware updates."/>
 
             <CheckBox Name="cbUser"
                       Content=" Create a Local User Account"
                       Margin="5"
-                      ToolTip="Add a new standard local account."/>
+                      ToolTip="Add a new local account for troubleshooting."/>
             
             <CheckBox Name="cbPowerSettings"
                       Content=" Disable Sleep on AC Power"
                       Margin="5"
-                      ToolTip="Prevent system invoking sleep mode while plugged in."/>
+                      ToolTip="Prevent system from entering sleep mode while plugged in."/>
         </StackPanel>
 
         <!-- Button Controls -->
