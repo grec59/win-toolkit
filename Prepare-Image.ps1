@@ -161,9 +161,11 @@ function Execute-Actions {
     foreach ($action in $chosen) {
         try {
             Invoke-WmiMethod -Namespace root\ccm -Class SMS_CLIENT -Name TriggerSchedule -ArgumentList $action.Guid -ErrorAction Stop | Out-Null
-            Write-Host "Triggered ConfigMgr action: $($action.Name)" -Level SUCCESS
+            Write-Host "SUCCESS: $($action.Name)" -ForegroundColor Green
+            "SUCCESS: $($action.Name)" | Out-File -FilePath $output -Encoding utf8 -Append
         } catch {
-            Write-Host "Failed ConfigMgr action: $($action.Name) -> $($_.Exception.Message)" -Level FAIL
+            Write-Host "FAIL: $($action.Name) $($_.Exception.Message)" -ForegroundColor Red
+            "FAIL: $($action.Name) $($_.Exception.Message)" | Out-File -FilePath $output -Encoding utf8 -Append
         }
         Start-Sleep -Seconds 2
     }
