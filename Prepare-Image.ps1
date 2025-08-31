@@ -280,17 +280,22 @@ Add-Type -AssemblyName PresentationFramework
 $xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         Title="Toolkit Action Selector"
-        Height="320"
-        Width="420"
+        Height="360" Width="420"
         Background="#f2f5f7"
         WindowStartupLocation="CenterScreen"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         FontFamily="Segoe UI">
 
-    <DockPanel Margin="15">
+    <Grid Margin="15" >
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>    <!-- Title Section -->
+            <RowDefinition Height="*"/>       <!-- Options Section -->
+            <RowDefinition Height="Auto"/>    <!-- Button Controls -->
+        </Grid.RowDefinitions>
+
         <!-- Title Section -->
-        <StackPanel DockPanel.Dock="Top" Margin="0 0 0 15" HorizontalAlignment="Center">
+        <StackPanel Grid.Row="0" Margin="0 0 0 15" HorizontalAlignment="Center">
             <TextBlock Text="Toolkit Action Selector"
                        FontSize="18"
                        FontWeight="Bold"
@@ -305,7 +310,7 @@ $xaml = @"
         </StackPanel>
 
         <!-- Options inside Border box -->
-        <Border DockPanel.Dock="Top"
+        <Border Grid.Row="1"
                 Margin="10,0,10,0"
                 Padding="10"
                 BorderBrush="#0078d7"
@@ -322,12 +327,12 @@ $xaml = @"
                           Content=" Run Configuration Manager Tasks"
                           Margin="5"
                           ToolTip="Trigger software/hardware inventory and application deployments."/>
-    
+         
                 <CheckBox Name="cbDell"
                           Content=" Install Dell System Updates"
                           Margin="5"
                           ToolTip="Run Dell Command Update to check for BIOS, driver, and firmware updates."/>
-    
+         
                 <CheckBox Name="cbUser"
                           Content=" Create a Local User Account"
                           Margin="5"
@@ -341,8 +346,8 @@ $xaml = @"
         </Border>
 
         <!-- Button Controls -->
-        <StackPanel Orientation="Horizontal"
-                    DockPanel.Dock="Bottom"
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     Margin="0,20,0,0">
             <Button Name="btnOK"
@@ -366,10 +371,9 @@ $xaml = @"
                 Cancel
             </Button>
         </StackPanel>
-    </DockPanel>
+    </Grid>
 </Window>
 "@
-
 
 # Parse XAML
 $reader = (New-Object System.Xml.XmlNodeReader ([xml]$xaml))
