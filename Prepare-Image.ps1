@@ -242,23 +242,22 @@ function Run-DellUpdates {
     $path = 'C:\Program Files\Dell\CommandUpdate\dcu-cli.exe'
     if (Test-Path $path) {
         Start-Sleep -Seconds 3
-        Write-Host "Dell Command CLI application detected, starting updates..."
          "Dell Command CLI application detected, starting updates..." | Out-File -FilePath $output -Encoding utf8 -Append
         & "$path" /applyUpdates -autoSuspendBitLocker=enable -forceupdate=enable -outputLog='C:\command.log'
     } else {
-        Write-Host "Dell Command application not detected, skipping updates..."  -ForegroundColor Yellow
-         "WARN: Dell Command CLI application not detected, skipping updates..." | Out-File -FilePath $output -Encoding utf8 -Append
+        Write-Host "Dell Command application not detected, skipping updates."  -ForegroundColor Yellow
+         "WARN: Dell Command CLI application not detected, skipping updates." | Out-File -FilePath $output -Encoding utf8 -Append
     }
 }
 
 function Disable-Sleep {
 # --- Power settings tuning ---
-Write-Host "Disabling Sleep and Lid Closure action When Plugged In..." -ForegroundColor Cyan
+Write-Host "Disabling Sleep When Plugged In..." -ForegroundColor Cyan
 Start-Sleep 2
 powercfg /change standby-timeout-ac 0
 powercfg -setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
-Write-Host "SUCCESS: Sleep and Lid Closure action When Plugged In was disabled." -ForegroundColor Green
-"SUCCESS: Sleep and Lid Closure action When Plugged In has been disabled." | Out-File -FilePath $output -Encoding utf8 -Append
+Write-Host "SUCCESS: Sleep and Lid Closure action when plugged in is disabled." -ForegroundColor Green
+"SUCCESS: Sleep and Lid Closure action when plugged in has been disabled." | Out-File -FilePath $output -Encoding utf8 -Append
 Start-Sleep 2
 }
 
@@ -460,9 +459,7 @@ $btnOK.Add_Click({
 
 # Show GUI
 $win.Topmost = $true
-$win.Activate() | Out-Null
 $win.ShowDialog() | Out-Null
-$sel = $win.Tag
 
 Clear-Host
 
