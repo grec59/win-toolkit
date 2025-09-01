@@ -110,23 +110,89 @@ function Execute-Actions {
     )
 
     # Build XAML
-    $xaml = @"
-<Window xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' Title='Select ConfigMgr Actions' Height='Auto' Width='400' SizeToContent='Height' WindowStartupLocation='CenterScreen'>
-  <StackPanel Margin='10'>
-    <TextBlock FontWeight='Bold' Margin='0 0 0 10'>Choose actions to perform:</TextBlock>
-    <Button Name='btnSelectAll' Width='100' Margin='0 0 0 10'>Select All</Button>
-    <ItemsControl Name='icActions'>
-      <ItemsControl.ItemTemplate>
-        <DataTemplate>
-          <CheckBox Content='{Binding Name}' IsChecked='{Binding IsChecked, Mode=TwoWay}' />
-        </DataTemplate>
-      </ItemsControl.ItemTemplate>
-    </ItemsControl>
-    <StackPanel Orientation='Horizontal' HorizontalAlignment='Right' Margin='0 15 0 0'>
-      <Button Name='btnOK' Width='75' Margin='5' IsDefault='True'>Proceed</Button>
-      <Button Width='75' Margin='5' IsCancel='True'>Cancel</Button>
-    </StackPanel>
-  </StackPanel>
+$xaml = @"
+<Window xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'
+        Title='Configuration Manager Client Actions'
+        Height='Auto' Width='420'
+        SizeToContent='Height'
+        WindowStartupLocation='CenterScreen'
+        Background='#f2f5f7'
+        FontFamily='Segoe UI'
+        WindowStyle='SingleBorderWindow'
+        ResizeMode='NoResize'>
+
+    <Grid Margin='15'>
+        <Grid.RowDefinitions>
+            <RowDefinition Height='Auto' />    <!-- Title -->
+            <RowDefinition Height='*' />       <!-- ItemsControl -->
+            <RowDefinition Height='Auto' />    <!-- Buttons Panel -->
+        </Grid.RowDefinitions>
+
+        <!-- Title Section -->
+        <StackPanel Grid.Row='0' Margin='0 0 0 15' HorizontalAlignment='Center'>
+            <TextBlock Text='Configuration Manager Client Actions'
+                       FontSize='18'
+                       FontWeight='Bold'
+                       Foreground='#0078d7'
+                       HorizontalAlignment='Center'/>
+            <TextBlock Text='Choose the actions you want to perform:'
+                       FontSize='14'
+                       FontStyle='Italic'
+                       Foreground='#2b2b2b'
+                       Margin='0 5 0 0'
+                       HorizontalAlignment='Center'/>
+        </StackPanel>
+
+        <!-- ItemsControl inside Border -->
+        <Border Grid.Row='1'
+                Margin='10,0,10,0'
+                Padding='10'
+                Background='White'
+                BorderBrush='#0078d7'
+                BorderThickness='2'
+                CornerRadius='4'>
+            <ScrollViewer VerticalScrollBarVisibility='Auto' MaxHeight='180'>
+                <ItemsControl Name='icActions'>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <CheckBox Content='{Binding Name}'
+                                      IsChecked='{Binding IsChecked, Mode=TwoWay}'
+                                      Margin='5,0,5,10'/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Bottom Buttons Panel with Select All bottom-left, others bottom-right -->
+        <Grid Grid.Row='2' Margin='0,20,0,0'>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width='Auto' />    <!-- Select All -->
+                <ColumnDefinition Width='*' />       <!-- Spacer -->
+                <ColumnDefinition Width='Auto' />    <!-- Proceed / Cancel -->
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Orientation='Horizontal' HorizontalAlignment='Left' Grid.Column='0'>
+                <Button Name='btnSelectAll' Width='100' Height='28' Margin='5 0 5 0'
+                        Background='#0078d7' Foreground='White' FontWeight='SemiBold' BorderBrush='#005a9e'>
+                    Select All
+                </Button>
+            </StackPanel>
+
+            <StackPanel Orientation='Horizontal' HorizontalAlignment='Right' Grid.Column='2'>
+                <Button Name='btnOK' Width='90' Height='28' Margin='5'
+                        IsDefault='True'
+                        Background='#0078d7' Foreground='White' FontWeight='SemiBold' BorderBrush='#005a9e'>
+                    Proceed
+                </Button>
+                <Button Width='90' Height='28' Margin='5' IsCancel='True'
+                        Background='#cccccc' Foreground='Black' BorderBrush='#999999'>
+                    Cancel
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Grid>
+
 </Window>
 "@
 
@@ -279,7 +345,7 @@ Add-Type -AssemblyName PresentationFramework
 # Define enhanced XAML GUI
 $xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        Title="Toolkit Action Selector"
+        Title="Quick Utilities Script v1.0"
         Height="360" Width="420"
         Background="#f2f5f7"
         WindowStartupLocation="CenterScreen"
@@ -296,13 +362,13 @@ $xaml = @"
 
         <!-- Title Section -->
         <StackPanel Grid.Row="0" Margin="0 0 0 15" HorizontalAlignment="Center">
-            <TextBlock Text="Toolkit Action Selector"
+            <TextBlock Text="Quick Utilities v1.0"
                        FontSize="18"
                        FontWeight="Bold"
                        Foreground="#0078d7"
                        HorizontalAlignment="Center"/>
-            <TextBlock Text="Choose actions to perform:"
-                       FontSize="12"
+            <TextBlock Text="Choose the actions you want to perform:"
+                       FontSize="14"
                        FontStyle="Italic"
                        Foreground="#2b2b2b"
                        Margin="0 5 0 0"
