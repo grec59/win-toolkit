@@ -460,6 +460,7 @@ $btnOK.Add_Click({
 # Show GUI
 $win.Topmost = $true
 $win.ShowDialog() | Out-Null
+$sel = $win.Tag
 
 Clear-Host
 
