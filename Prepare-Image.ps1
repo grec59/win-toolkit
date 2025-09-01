@@ -68,7 +68,7 @@ function Create-User {
 
     try {
         New-LocalUser @params -ErrorAction Stop | Out-Null
-        Write-Host "SUCCESS: Created new user: $username"
+        Write-Host "SUCCESS: Created new user: $username" -ForegroundColor Green
         "SUCCESS: Created new local user account: $username" | Out-File -FilePath $output -Encoding utf8 -Append
     } catch {
         Write-Host "FAIL: Unable to create user: $($_.Exception.Message)" -ForegroundColor Red
@@ -245,7 +245,7 @@ function Run-DellUpdates {
          "Dell Command CLI application detected, starting updates..." | Out-File -FilePath $output -Encoding utf8 -Append
         & "$path" /applyUpdates -autoSuspendBitLocker=enable -forceupdate=enable -outputLog='C:\command.log'
     } else {
-        Write-Host "Dell Command application not detected, skipping updates."  -ForegroundColor Yellow
+        Write-Host "WARN: Dell Command application not detected, skipping updates."  -ForegroundColor Yellow
          "WARN: Dell Command CLI application not detected, skipping updates." | Out-File -FilePath $output -Encoding utf8 -Append
     }
 }
