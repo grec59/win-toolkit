@@ -265,6 +265,15 @@ function Disable-Sleep {
     Start-Sleep 2
 }
 
+function Remove-TempFiles {
+
+    $temp = 'C:\Windows\Temp\'
+    Write-Host "Removing temporary files from $temp..."
+    $itemsremoved = (Get-ChildItem $temp | ForEach-Object { try { Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue; $_ } catch {} }).Count
+    Write-Host "Removed $itemsremoved temporary files."
+
+}
+
 # --- Begin Script Logic ---
 
 Clear-Host
@@ -380,27 +389,32 @@ $xaml = @"
                 <CheckBox Name="cbGP"
                           Content=" Update Group Policy"
                           Margin="5"
-                          ToolTip="Run gpupdate /force to refresh computer and user policies."/>
+                          ToolTip="Run gpupdate to refresh computer policies."/>
                 
                 <CheckBox Name="cbCM"
-                          Content=" Run Configuration Manager Tasks"
+                          Content=" Configuration Manager tasks"
                           Margin="5"
-                          ToolTip="Trigger software/hardware inventory and application deployments."/>
+                          ToolTip="Initiate software/hardware inventory and application deployments."/>
          
                 <CheckBox Name="cbDell"
-                          Content=" Install Dell System Updates"
+                          Content=" Install Dell system updates"
                           Margin="5"
-                          ToolTip="Run Dell Command Update to check for BIOS, driver, and firmware updates."/>
+                          ToolTip="Run Dell Command to check for BIOS, driver, and firmware updates."/>
          
                 <CheckBox Name="cbUser"
-                          Content=" Create a Local User Account"
+                          Content=" Create a local user account"
                           Margin="5"
-                          ToolTip="Add a new local account for troubleshooting."/>
+                          ToolTip="Add a new local account for non-domain access."/>
                 
                 <CheckBox Name="cbPowerSettings"
-                          Content=" Disable Sleep on AC Power"
+                          Content=" Disable sleep on AC power"
                           Margin="5"
                           ToolTip="Prevent system from entering sleep mode while plugged in."/>
+
+                <CheckBox Name="cbTempFiles"
+                          Content=" Remove temporary files"
+                          Margin="5"
+                          ToolTip="Clear temporary files from Windows directory.."/>
             </StackPanel>
         </Border>
 
@@ -445,6 +459,7 @@ $btnOK.Add_Click({
         DellUpdates  = $win.FindName("cbDell").IsChecked
         CreateUser   = $win.FindName("cbUser").IsChecked
         PowerConfig  = $win.FindName("cbPowerSettings").IsChecked
+        ClearTemp    = $win.FindName("cbTempFiles").IsChecked
     }
     $win.Close()
 })
@@ -475,6 +490,10 @@ if ($sel.DellUpdates) {
 
 if ($sel.PowerConfig) {
     Disable-Sleep
+}
+
+if ($sel.ClearTemp) {
+    Remove-TempFiles
 }
 
 " " | Out-File -FilePath $output -Encoding utf8 -Append
