@@ -21,10 +21,10 @@
   .\Prepare-Image.ps1 -Verbose
 #>
 
-# --- Function Definitions ---
+# --- Begin Function Definitions ---
 
 function Initialize-Log {
-# --- Prefer OneDrive\Desktop if available, otherwise use local Desktop ---
+    # --- Prefer OneDrive\Desktop if available, otherwise use local Desktop ---
 
     $desktop = [Environment]::GetFolderPath("Desktop")
     $output = if ($env:OneDrive -and (Test-Path $env:OneDrive)) {
@@ -34,11 +34,9 @@ function Initialize-Log {
     Join-Path $desktop "results.txt"
     }
 
-# --- Ensure directory exists ---
+    New-Item -Path (Split-Path $output) -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
 
-New-Item -Path (Split-Path $output) -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
-
-return $output
+    return $output
 
 }
 
@@ -70,7 +68,9 @@ function Create-User {
         New-LocalUser @params -ErrorAction Stop | Out-Null
         Write-Host "SUCCESS: Created new user: $username" -ForegroundColor Green
         "SUCCESS: Created new local user account: $username" | Out-File -FilePath $output -Encoding utf8 -Append
-    } catch {
+    } 
+    
+    catch {
         Write-Host "FAIL: Unable to create user: $($_.Exception.Message)" -ForegroundColor Red
         "FAIL: Unable to create local user account: $($_.Exception.Message)" | Out-File -FilePath $output -Encoding utf8 -Append
     }
@@ -83,7 +83,8 @@ function Invoke-GroupPolicy {
         Start-Sleep -Seconds 5
         Write-Host "SUCCESS: Computer Policy update has completed." -ForegroundColor Green
         "SUCCESS: Computer Policy update completed. Check Event Viewer for details." | Out-File -FilePath $output -Encoding utf8 -Append
-}
+    }
+
     catch {
         Write-Host "FAIL: Failed to update Computer Policy. Check Event Viewer for details." -ForegroundColor Yellow
         "FAIL: Unable to update Computer Policy." | Out-File -FilePath $output -Encoding utf8 -Append
@@ -94,7 +95,8 @@ function Invoke-GroupPolicy {
 function Execute-Actions {
     Add-Type -AssemblyName PresentationFramework
 
-    # Define the actions as PSCustomObjects
+    # --- Create Configuration Manager client actions as PSCustomObjects ---
+
     $actionsList = @(
         [PSCustomObject]@{ Name = "Machine policy retrieval cycle"; Guid = "{00000000-0000-0000-0000-000000000021}"; IsChecked = $false },
         [PSCustomObject]@{ Name = "Machine policy evaluation cycle"; Guid = "{00000000-0000-0000-0000-000000000022}"; IsChecked = $false },
@@ -109,7 +111,8 @@ function Execute-Actions {
         [PSCustomObject]@{ Name = "File collection"; Guid = "{00000000-0000-0000-0000-000000000010}"; IsChecked = $false }
     )
 
-    # Build XAML
+    # --- Build XAML for Configuration Manager client selection GUI ---
+
 $xaml = @"
 <Window xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'
         Title='Configuration Manager Client Actions'
@@ -131,12 +134,12 @@ $xaml = @"
         <!-- Title Section -->
         <StackPanel Grid.Row='0' Margin='0 0 0 15' HorizontalAlignment='Center'>
             <TextBlock Text='Configuration Manager Client Actions'
-                       FontSize='18'
+                       FontSize='16'
                        FontWeight='Bold'
                        Foreground='#0078d7'
                        HorizontalAlignment='Center'/>
             <TextBlock Text='Choose the actions you want to perform:'
-                       FontSize='14'
+                       FontSize='12'
                        FontStyle='Italic'
                        Foreground='#2b2b2b'
                        Margin='0 5 0 0'
@@ -199,18 +202,15 @@ $xaml = @"
     $reader = (New-Object System.Xml.XmlNodeReader ([xml]$xaml))
     $win = [Windows.Markup.XamlReader]::Load($reader)
 
-    # Bind the actions
     $ic = $win.FindName('icActions')
     $ic.ItemsSource = $actionsList
 
-    # Select All button
     $btnSelectAll = $win.FindName('btnSelectAll')
     $btnSelectAll.Add_Click({
         foreach ($item in $actionsList) { $item.IsChecked = $true }
-        $ic.Items.Refresh()  # Refresh to show changes
+        $ic.Items.Refresh()
     })
 
-    # Proceed button
     $btnOK = $win.FindName('btnOK')
     $btnOK.Add_Click({
         $win.Tag = $actionsList | Where-Object { $_.IsChecked }
@@ -223,13 +223,16 @@ $xaml = @"
     $chosen = $win.Tag
     if (-not $chosen) { return }
 
-    # Execute selected actions
+    # --- Invoke selected Configuration Manager client actions ---
+
     foreach ($action in $chosen) {
         try {
             Invoke-WmiMethod -Namespace root\ccm -Class SMS_CLIENT -Name TriggerSchedule -ArgumentList $action.Guid -ErrorAction Stop | Out-Null
             Write-Host "SUCCESS: $($action.Name)" -ForegroundColor Green
             "SUCCESS: $($action.Name)" | Out-File -FilePath $output -Encoding utf8 -Append
-        } catch {
+        } 
+        
+        catch {
             Write-Host "FAIL: $($action.Name) $($_.Exception.Message)" -ForegroundColor Red
             "FAIL: $($action.Name) $($_.Exception.Message)" | Out-File -FilePath $output -Encoding utf8 -Append
         }
@@ -242,55 +245,47 @@ function Run-DellUpdates {
     $path = 'C:\Program Files\Dell\CommandUpdate\dcu-cli.exe'
     if (Test-Path $path) {
         Start-Sleep -Seconds 3
-         "Dell Command CLI application detected, starting updates..." | Out-File -FilePath $output -Encoding utf8 -Append
+        "Dell Command CLI application detected, starting updates..." | Out-File -FilePath $output -Encoding utf8 -Append
         & "$path" /applyUpdates -autoSuspendBitLocker=enable -forceupdate=enable -outputLog='C:\command.log'
-    } else {
+    } 
+    
+    else {
         Write-Host "WARN: Dell Command application not detected, skipping updates."  -ForegroundColor Yellow
          "WARN: Dell Command CLI application not detected, skipping updates." | Out-File -FilePath $output -Encoding utf8 -Append
     }
 }
 
 function Disable-Sleep {
-# --- Power settings tuning ---
-Write-Host "Disabling Sleep When Plugged In..." -ForegroundColor Cyan
-Start-Sleep 2
-powercfg /change standby-timeout-ac 0
-powercfg -setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
-Write-Host "SUCCESS: Sleep and Lid Closure action when plugged in is disabled." -ForegroundColor Green
-"SUCCESS: Sleep and Lid Closure action when plugged in has been disabled." | Out-File -FilePath $output -Encoding utf8 -Append
-Start-Sleep 2
+    Write-Host "Disabling Sleep When Plugged In..." -ForegroundColor Cyan
+    Start-Sleep 2
+    powercfg /change standby-timeout-ac 0
+    powercfg -setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
+    Write-Host "SUCCESS: Sleep and Lid Closure action when plugged in is disabled." -ForegroundColor Green
+    "SUCCESS: Sleep and Lid Closure action when plugged in has been disabled." | Out-File -FilePath $output -Encoding utf8 -Append
+    Start-Sleep 2
 }
 
-# --- Script Logic ---
+# --- Begin Script Logic ---
 
 Clear-Host
 
-$pspath = (Get-Process -Id $PID).Path
-
-# --- Force TLS 1.2 ---
-
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-# --- Ensure admin privileges ---
+# --- Check for elevated user session, elevate if needed and restart script execution ---
+
+$pspath = (Get-Process -Id $PID).Path
 
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
     Start-Process $pspath -Verb runAs -ArgumentList '-NoExit', '-ExecutionPolicy RemoteSigned', '-Command', "& {Invoke-WebRequest 'https://agho.me/provision' -UseBasicParsing | Invoke-Expression}"
     Stop-Process -Id $PID
 }
 
-# --- Logging ---
-
 $output = Initialize-Log
-
-# --- System info ---
 
 $computer = $env:COMPUTERNAME
 $cpu = (Get-CimInstance Win32_Processor | Select-Object -First 1).Name
 $ram = [math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB, 2)
 $bootVolume = [math]::Round((Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'").FreeSpace / 1GB, 2)
-
-
-# --- Display information ---
 
 $messageHeader = @"
 
@@ -332,16 +327,15 @@ Write-Host $messageTasks
 "Task Execution Logs:" | Out-File -FilePath $output -Encoding utf8 -Append
 " " | out-File -FilePath $output -Encoding utf8 -Append
 
-# --- Confirmation ---
+# --- Retrieve user input and launch selection window upon confirmation ---
 
 while (($i = Read-Host " Press Y to continue or N to quit") -notmatch '^[YyNn]$') {}
 if ($i -notmatch '^[Yy]$') { exit }
 
-# --- Build GUI ---
-
 Add-Type -AssemblyName PresentationFramework
 
-# Define enhanced XAML GUI
+# --- Build XAML for task selection GUI ---
+
 $xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         Title="Quick Utilities Script v1.0"
@@ -361,13 +355,13 @@ $xaml = @"
 
         <!-- Title Section -->
         <StackPanel Grid.Row="0" Margin="0 0 0 15" HorizontalAlignment="Center">
-            <TextBlock Text="Quick Utilities v1.0"
-                       FontSize="18"
+            <TextBlock Text="Actions Available"
+                       FontSize="16"
                        FontWeight="Bold"
                        Foreground="#0078d7"
                        HorizontalAlignment="Center"/>
             <TextBlock Text="Choose the actions you want to perform:"
-                       FontSize="14"
+                       FontSize="12"
                        FontStyle="Italic"
                        Foreground="#2b2b2b"
                        Margin="0 5 0 0"
@@ -440,11 +434,9 @@ $xaml = @"
 </Window>
 "@
 
-# Parse XAML
 $reader = (New-Object System.Xml.XmlNodeReader ([xml]$xaml))
 $win = [Windows.Markup.XamlReader]::Load($reader)
 
-# --- Capture GUI selections ---
 $btnOK = $win.FindName("btnOK")
 $btnOK.Add_Click({
     $win.Tag = @{
@@ -457,14 +449,13 @@ $btnOK.Add_Click({
     $win.Close()
 })
 
-# Show GUI
 $win.Topmost = $true
 $win.ShowDialog() | Out-Null
 $sel = $win.Tag
 
 Clear-Host
 
-# --- Execute tasks ---
+# --- Execute Tasks ---
 
 if ($sel.CreateUser) {
     Create-User
