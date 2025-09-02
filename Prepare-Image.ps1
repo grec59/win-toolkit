@@ -268,9 +268,9 @@ function Disable-Sleep {
 function Remove-TempFiles {
 
     $temp = 'C:\Windows\Temp\'
-    Write-Host "Removing temporary files from $temp..."
+    Write-Host "Removing temporary files..." -ForegroundColor Cyan
     $itemsremoved = (Get-ChildItem $temp | ForEach-Object { try { Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue; $_ } catch {} }).Count
-    Write-Host "Removed $itemsremoved temporary files."
+    Write-Host "SUCCESS: Removed $itemsremoved temporary files from $temp" -ForegroundColor Green
 
 }
 
@@ -318,10 +318,11 @@ $messageTasks = @"
  Actions Available:
 
  - Update Group Policy
- - Configuration Manager Tasks
- - Install Dell System Updates
- - Create a Local User Account
+ - Configuration Manager tasks
+ - Install Dell system updates
+ - Create a local user account
  - Disable sleep on AC
+ - Remove temporary files
 
 "@
 
