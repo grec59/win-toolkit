@@ -6,11 +6,6 @@
     - Installing Dell system updates
     - Creating a local user account
 
-.PARAMETER Verbose
-  Enhance script logging for troubleshooting and debugging. 
-.PARAMETER Remote
-  Switches to CLI mode and disables GUI elements for remote use over a PSSession.
-
 .NOTES
     - Requires administrative privileges.
     - Designed for interactive use with GUI-based action selection.    
@@ -266,11 +261,31 @@ function Disable-Sleep {
 }
 
 function Remove-TempFiles {
-
     $temp = 'C:\Windows\Temp\'
     Write-Host "Removing temporary files..." -ForegroundColor Cyan
     $itemsremoved = (Get-ChildItem $temp | ForEach-Object { try { Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue; $_ } catch {} }).Count
     Write-Host "SUCCESS: Removed $itemsremoved temporary files from $temp" -ForegroundColor Green
+
+}
+
+function Update-HostsFile {
+    # Prompt for hostname and IP address
+    $hostname = Read-Host "Enter the hostname"
+    $ip = Read-Host "Enter the IP address"
+
+    # Path to the hosts file
+    $hostsPath = "$env:SystemRoot\System32\drivers\etc\hosts"
+
+    # Create the entry
+    $entry = "`n$ip`t$hostname"
+
+    # Backup the original hosts file
+    Copy-Item $hostsPath "$hostsPath.bak" -Force
+
+    # Add the entry
+    Add-Content -Path $hostsPath -Value $entry
+
+    Write-Output "Entry added: $ip $hostname"
 
 }
 
@@ -415,7 +430,11 @@ $xaml = @"
                 <CheckBox Name="cbTempFiles"
                           Content=" Remove temporary files"
                           Margin="5"
-                          ToolTip="Clear temporary files from Windows directory.."/>
+                          ToolTip="Clear temporary files from Windows directory."/>
+                <CheckBox Name="cbEditHosts"
+                          Content=" Update local hosts file"
+                          Margin="5"
+                          ToolTip="Add local hosts file entry for DNS resolution."/>
             </StackPanel>
         </Border>
 
@@ -461,6 +480,7 @@ $btnOK.Add_Click({
         CreateUser   = $win.FindName("cbUser").IsChecked
         PowerConfig  = $win.FindName("cbPowerSettings").IsChecked
         ClearTemp    = $win.FindName("cbTempFiles").IsChecked
+        EditHosts    = $win.FindName("cbEditHosts").IsChecked
     }
     $win.Close()
 })
@@ -495,6 +515,10 @@ if ($sel.PowerConfig) {
 
 if ($sel.ClearTemp) {
     Remove-TempFiles
+}
+
+if ($.sel.EditHosts) {
+    Update-HostsFile
 }
 
 " " | Out-File -FilePath $output -Encoding utf8 -Append
