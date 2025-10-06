@@ -517,7 +517,7 @@ if ($sel.ClearTemp) {
     Remove-TempFiles
 }
 
-if ($.sel.EditHosts) {
+if ($sel.EditHosts) {
     Update-HostsFile
 }
 
