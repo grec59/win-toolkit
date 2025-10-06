@@ -431,6 +431,7 @@ $xaml = @"
                           Content=" Remove temporary files"
                           Margin="5"
                           ToolTip="Clear temporary files from Windows directory."/>
+                          
                 <CheckBox Name="cbEditHosts"
                           Content=" Update local hosts file"
                           Margin="5"
