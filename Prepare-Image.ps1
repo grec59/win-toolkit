@@ -364,12 +364,13 @@ Add-Type -AssemblyName PresentationFramework
 $xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         Title="Quick Utilities Script v1.0"
-        Height="360" Width="420"
-        Background="#f2f5f7"
-        WindowStartupLocation="CenterScreen"
-        WindowStyle="SingleBorderWindow"
-        ResizeMode="NoResize"
-        FontFamily="Segoe UI">
+        Height='Auto' Width='420'
+        SizeToContent='Height'
+        WindowStartupLocation='CenterScreen'
+        Background='#f2f5f7'
+        FontFamily='Segoe UI'
+        WindowStyle='SingleBorderWindow'
+        ResizeMode='NoResize'>
 
     <Grid Margin="15" >
         <Grid.RowDefinitions>
@@ -380,7 +381,7 @@ $xaml = @"
 
         <!-- Title Section -->
         <StackPanel Grid.Row="0" Margin="0 0 0 15" HorizontalAlignment="Center">
-            <TextBlock Text="Actions Available"
+            <TextBlock Text="System Actions Available"
                        FontSize="16"
                        FontWeight="Bold"
                        Foreground="#0078d7"
@@ -401,7 +402,20 @@ $xaml = @"
                 BorderThickness="2"
                 Background="White"
                 CornerRadius="4">
-            <StackPanel>
+	    
+	<StackPanel>
+            <ScrollViewer VerticalScrollBarVisibility='Auto' MaxHeight='180'>
+                <ItemsControl Name='icActions'>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <CheckBox Content='{Binding Name}'
+                                      IsChecked='{Binding IsChecked, Mode=TwoWay}'
+                                      Margin='5,0,5,10'/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
                 <CheckBox Name="cbGP"
                           Content=" Update Group Policy"
                           Margin="5"
