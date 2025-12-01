@@ -663,19 +663,19 @@ Add-Type -AssemblyName PresentationFramework
 $xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         Title="Quick Utilities Script v1.0"
-        Height='Auto' Width='420'
-        SizeToContent='Height'
-        WindowStartupLocation='CenterScreen'
-        Background='#f2f5f7'
-        FontFamily='Segoe UI'
-        WindowStyle='SingleBorderWindow'
-        ResizeMode='NoResize'>
+        Height="Auto" Width="420"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterScreen"
+        Background="#f2f5f7"
+        FontFamily="Segoe UI"
+        WindowStyle="SingleBorderWindow"
+        ResizeMode="NoResize">
 
-    <Grid Margin="15" >
+    <Grid Margin="15">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>    <!-- Title Section -->
-            <RowDefinition Height="*"/>       <!-- Options Section -->
-            <RowDefinition Height="Auto"/>    <!-- Button Controls -->
+            <RowDefinition Height="Auto"/> 
+            <RowDefinition Height="*"/>    
+            <RowDefinition Height="Auto"/> 
         </Grid.RowDefinitions>
 
         <!-- Title Section -->
@@ -684,16 +684,18 @@ $xaml = @"
                        FontSize="16"
                        FontWeight="Bold"
                        Foreground="#0078d7"
-                       HorizontalAlignment="Center"/>
+                       HorizontalAlignment="Center"
+                       TextAlignment="Center"/>
             <TextBlock Text="Choose the actions you want to perform:"
                        FontSize="12"
                        FontStyle="Italic"
                        Foreground="#2b2b2b"
                        Margin="0 5 0 0"
-                       HorizontalAlignment="Center"/>
+                       HorizontalAlignment="Center"
+                       TextAlignment="Center"/>
         </StackPanel>
 
-        <!-- Options inside Border box -->
+        <!-- Options Section -->
         <Border Grid.Row="1"
                 Margin="10,0,10,0"
                 Padding="10"
@@ -701,93 +703,115 @@ $xaml = @"
                 BorderThickness="2"
                 Background="White"
                 CornerRadius="4">
-	    
-	<StackPanel>
-            <ScrollViewer VerticalScrollBarVisibility='Auto' MaxHeight='180'>
-                <ItemsControl Name='icActions'>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <CheckBox Content='{Binding Name}'
-                                      IsChecked='{Binding IsChecked, Mode=TwoWay}'
-                                      Margin='5,0,5,10'/>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
 
-                <CheckBox Name="cbGP"
-                          Content=" Update Group Policy"
-                          Margin="5"
-                          ToolTip="Run gpupdate to refresh computer policies."/>
-                
-                <CheckBox Name="cbCM"
-                          Content=" Configuration Manager tasks"
-                          Margin="5"
-                          ToolTip="Initiate software/hardware inventory and application deployments."/>
-         
-                <CheckBox Name="cbDell"
-                          Content=" Install Dell system updates"
-                          Margin="5"
-                          ToolTip="Run Dell Command to check for BIOS, driver, and firmware updates."/>
-         
-                <CheckBox Name="cbUser"
-                          Content=" Create a local user account"
-                          Margin="5"
-                          ToolTip="Add a new local account for non-domain access."/>
-                
-                <CheckBox Name="cbPowerSettings"
-                          Content=" Disable sleep on AC power"
-                          Margin="5"
-                          ToolTip="Prevent system from entering sleep mode while plugged in."/>
+            <StackPanel>
+                <!-- Dynamic Items -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="180">
+                    <ItemsControl Name="icActions">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}" Margin="5 0 5 10">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock FontFamily="Segoe MDL2 Assets"
+                                                   FontSize="16"
+                                                   Text="&#xE115;"
+                                                   Margin="6,0,8,0"/>
+                                        <TextBlock Text="{Binding Name}"/>
+                                    </StackPanel>
+                                </CheckBox>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
 
-                <CheckBox Name="cbTempFiles"
-                          Content=" Remove temporary files"
-                          Margin="5"
-                          ToolTip="Clear temporary files from Windows directory."/>
-                          
-                <CheckBox Name="cbEditHosts"
-                          Content=" Update local hosts file"
-                          Margin="5"
-                          ToolTip="Add local hosts file entry for DNS resolution."/>
+                <!-- Static Checkboxes With Updated Icons -->
+                <CheckBox Name="cbGP" Margin="5"
+                          ToolTip="Run gpupdate to refresh computer policies.">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE923;" FontSize="16" Margin="6,0,8,0"/>
+                        <TextBlock Text="Update Group Policy"/>
+                    </StackPanel>
+                </CheckBox>
 
-                <CheckBox Name="cbClearTeams"
-                          Content=" Repair Microsoft Teams"
-                          Margin="5"
-                          ToolTip="Clear Teams application cache and run offline MSIX installer."/>
+                <CheckBox Name="cbCM" Margin="5"
+                          ToolTip="Initiate software/hardware inventory and application deployments.">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE713;" FontSize="16" Margin="6,0,8,0"/>
+                        <TextBlock Text="Configuration Manager tasks"/>
+                    </StackPanel>
+                </CheckBox>
 
-                <CheckBox Name="cbAuditReport"
-                          Content=" Generate system report"
-                          Margin="5"
-                          ToolTip="Output detailed system audit report - useful for user migration."/>
+                <CheckBox Name="cbDell" Margin="5"
+                          ToolTip="Run Dell Command to check for BIOS, driver, and firmware updates.">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE895;" FontSize="16" Margin="6,0,8,0"/>
+                        <TextBlock Text="Install Dell system updates"/>
+                    </StackPanel>
+                </CheckBox>
+
+                <CheckBox Name="cbUser" Margin="5"
+                          ToolTip="Add a new local account for non-domain access.">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE77B;" FontSize="16" Margin="6,0,8,0"/>
+                        <TextBlock Text="Create a local user account"/>
+                    </StackPanel>
+                </CheckBox>
+
+                <CheckBox Name="cbPowerSettings" Margin="5"
+                          ToolTip="Prevent system from entering sleep mode while plugged in.">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE945;" FontSize="16" Margin="6,0,8,0"/>
+                        <TextBlock Text="Disable sleep on AC power"/>
+                    </StackPanel>
+                </CheckBox>
+
+                <CheckBox Name="cbTempFiles" Margin="5"
+                          ToolTip="Clear temporary files from Windows directory.">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" FontSize="16" Margin="6,0,8,0"/>
+                        <TextBlock Text="Remove temporary files"/>
+                    </StackPanel>
+                </CheckBox>
+
+                <CheckBox Name="cbEditHosts" Margin="5"
+                          ToolTip="Add local hosts file entry for DNS resolution.">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE211;" FontSize="16" Margin="6,0,8,0"/>
+                        <TextBlock Text="Update local hosts file"/>
+                    </StackPanel>
+                </CheckBox>
+
+                <CheckBox Name="cbClearTeams" Margin="5"
+                          ToolTip="Clear Teams application cache and run offline MSIX installer.">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE78B;" FontSize="16" Margin="6,0,8,0"/>
+                        <TextBlock Text="Repair Microsoft Teams"/>
+                    </StackPanel>
+                </CheckBox>
+
+                <CheckBox Name="cbAuditReport" Margin="5"
+                          ToolTip="Generate detailed system audit report for migration.">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE14C;" FontSize="16" Margin="6,0,8,0"/>
+                        <TextBlock Text="Generate system report"/>
+                    </StackPanel>
+                </CheckBox>
+
             </StackPanel>
         </Border>
 
-        <!-- Button Controls -->
-        <StackPanel Grid.Row="2"
-                    Orientation="Horizontal"
-                    HorizontalAlignment="Right"
-                    Margin="0,20,0,0">
-            <Button Name="btnOK"
-                    Width="90"
-                    Height="28"
-                    Margin="5"
-                    IsDefault="True"
-                    Background="#0078d7"
-                    Foreground="White"
-                    FontWeight="SemiBold"
-                    BorderBrush="#005a9e">
-                Proceed
-            </Button>
-            <Button Width="90"
-                    Height="28"
-                    Margin="5"
-                    IsCancel="True"
-                    Background="#cccccc"
-                    Foreground="Black"
-                    BorderBrush="#999999">
-                Cancel
-            </Button>
+        <!-- Buttons -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button Name="btnOK" Width="90" Height="28" Margin="5"
+                    Background="#0078d7" Foreground="White"
+                    FontWeight="SemiBold" BorderBrush="#005a9e"
+                    IsDefault="True">Proceed</Button>
+
+            <Button Width="90" Height="28" Margin="5"
+                    Background="#cccccc" Foreground="Black"
+                    BorderBrush="#999999" IsCancel="True">Cancel</Button>
         </StackPanel>
+
     </Grid>
 </Window>
 "@
