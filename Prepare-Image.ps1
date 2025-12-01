@@ -642,14 +642,14 @@ function Copy-RemoteUserData {
                       -Recurse -Force -ErrorAction Stop
         }
         catch {
-            Write-Error "Failed to copy $folder: $($_.Exception.Message)"
+            Write-Error "Failed to copy ${folder}: $($_.Exception.Message)"
+
         }
     }
 
     Remove-PSSession $Session
 
-    Write-Error "Failed to copy ${folder}: $($_.Exception.Message)"
-
+    Write-Host "Transfer complete. Files saved to: $localDest"
 }
 
 # --- Begin Script Logic ---
