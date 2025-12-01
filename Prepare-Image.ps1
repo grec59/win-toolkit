@@ -648,7 +648,8 @@ function Copy-RemoteUserData {
 
     Remove-PSSession $Session
 
-    Write-Host "Transfer complete. Files saved to: $localDest"
+    Write-Error "Failed to copy ${folder}: $($_.Exception.Message)"
+
 }
 
 # --- Begin Script Logic ---
