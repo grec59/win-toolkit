@@ -621,7 +621,7 @@ function Copy-RemoteUserData {
         New-Item -ItemType Directory -Path $localDest -Force | Out-Null
     }
 
-    $folders = @('Desktop','Documents','Downloads','Favorites','Pictures','AppData\Local\Google\Chrome\User Data\Default\Bookmarks')
+    $folders = @('Desktop','Documents','Downloads','Favorites','Pictures','AppData\Local\Google\Chrome\User Data\Default\Bookmarks','AppData\Roaming\Microsoft\Signatures')
 
     foreach ($folder in $folders) {
         $remotePath = "C:\Users\$User\$folder"
