@@ -592,7 +592,7 @@ function Copy-RemoteUserData {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [string]$Host,
+        [string]$computername,
 
         [Parameter(Mandatory)]
         [string]$User,
@@ -601,13 +601,13 @@ function Copy-RemoteUserData {
         [string]$DestinationRoot = "C:\RemoteFiles"
     )
 
-    if (-not (Test-Connection -ComputerName $Host -Count 2 -Quiet)) {
+    if (-not (Test-Connection -ComputerName $computername -Count 2 -Quiet)) {
         Write-Error "Host $Host is unreachable."
         return
     }
 
     try {
-        $Session = New-PSSession -ComputerName $Host -ErrorAction Stop
+        $Session = New-PSSession -ComputerName $computername -ErrorAction Stop
     }
     catch {
         Write-Error "Failed to create remote session: $($_.Exception.Message)"
