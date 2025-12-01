@@ -615,13 +615,13 @@ function Copy-RemoteUserData {
     }
 
     $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
-    $localDest = Join-Path $DestinationRoot "$Host\$timestamp"
+    $localDest = Join-Path $DestinationRoot "$computername\$timestamp"
 
     if (-not (Test-Path $localDest)) {
         New-Item -ItemType Directory -Path $localDest -Force | Out-Null
     }
 
-    $folders = @('Desktop','Documents','Downloads','Favorites','Pictures')
+    $folders = @('Desktop','Documents','Downloads','Favorites','Pictures','AppData\Local\Google\Chrome\User Data\Default\Bookmarks')
 
     foreach ($folder in $folders) {
         $remotePath = "C:\Users\$User\$folder"
