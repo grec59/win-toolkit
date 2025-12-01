@@ -253,7 +253,7 @@ function Run-DellUpdates {
 }
 
 function Disable-Sleep {
-    Write-Host "Disabling Sleep When Plugged In..." -ForegroundColor Cyan
+    Write-Host "Disabling Sleep and Lid Closure When Plugged In..." -ForegroundColor Cyan
     Start-Sleep 2
     powercfg /change standby-timeout-ac 0
     powercfg -setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
@@ -586,6 +586,69 @@ function Generate-AuditReport {
     } Catch {
         Write-Error "Failed to write report: $_"
     }
+}
+
+function Copy-RemoteUserData {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Host,
+
+        [Parameter(Mandatory)]
+        [string]$User,
+
+        [Parameter()]
+        [string]$DestinationRoot = "C:\RemoteFiles"
+    )
+
+    if (-not (Test-Connection -ComputerName $Host -Count 2 -Quiet)) {
+        Write-Error "Host $Host is unreachable."
+        return
+    }
+
+    try {
+        $Session = New-PSSession -ComputerName $Host -ErrorAction Stop
+    }
+    catch {
+        Write-Error "Failed to create remote session: $($_.Exception.Message)"
+        return
+    }
+
+    $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
+    $localDest = Join-Path $DestinationRoot "$Host\$timestamp"
+
+    if (-not (Test-Path $localDest)) {
+        New-Item -ItemType Directory -Path $localDest -Force | Out-Null
+    }
+
+    $folders = @('Desktop','Documents','Downloads','Favorites','Pictures')
+
+    foreach ($folder in $folders) {
+        $remotePath = "C:\Users\$User\$folder"
+
+        $exists = Invoke-Command -Session $Session -ScriptBlock {
+            param($path)
+            Test-Path $path
+        } -ArgumentList $remotePath
+
+        if (-not $exists) {
+            continue
+        }
+
+        try {
+            Copy-Item -Path $remotePath `
+                      -Destination $localDest `
+                      -FromSession $Session `
+                      -Recurse -Force -ErrorAction Stop
+        }
+        catch {
+            Write-Error "Failed to copy $folder: $($_.Exception.Message)"
+        }
+    }
+
+    Remove-PSSession $Session
+
+    Write-Host "Transfer complete. Files saved to: $localDest"
 }
 
 # --- Begin Script Logic ---
