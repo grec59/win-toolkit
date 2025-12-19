@@ -21,20 +21,17 @@
 # --- Begin Function Definitions ---
 
 function Initialize-Log {
-    # --- Prefer OneDrive\Desktop if available, otherwise use local Desktop ---
-
     $desktop = [Environment]::GetFolderPath("Desktop")
+
     $output = if ($env:OneDrive -and (Test-Path $env:OneDrive)) {
         Join-Path $env:OneDrive "Desktop\results.txt"
-    } 
-    else {
+    } else {
         Join-Path $desktop "results.txt"
     }
 
     New-Item -Path (Split-Path $output) -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
 
     return $output
-
 }
 
 $Global:LogFile = Initialize-Log
@@ -64,12 +61,12 @@ function Create-User {
     try {
         New-LocalUser @params -ErrorAction Stop | Out-Null
         Write-Host "SUCCESS: Created new user: $username" -ForegroundColor Green
-        "SUCCESS: Created new local user account: $username" | Out-File -FilePath $output -Encoding utf8 -Append
+        "SUCCESS: Created new local user account: $username" | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
     } 
     
     catch {
         Write-Host "FAIL: Unable to create user: $($_.Exception.Message)" -ForegroundColor Red
-        "FAIL: Unable to create local user account: $($_.Exception.Message)" | Out-File -FilePath $output -Encoding utf8 -Append
+        "FAIL: Unable to create local user account: $($_.Exception.Message)" | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
     }
 }
 
@@ -79,20 +76,32 @@ function Invoke-GroupPolicy {
         gpupdate /target:computer | out-null
         Start-Sleep -Seconds 5
         Write-Host "SUCCESS: Computer Policy update has completed." -ForegroundColor Green
-        "SUCCESS: Computer Policy update completed. Check Event Viewer for details." | Out-File -FilePath $output -Encoding utf8 -Append
+        "SUCCESS: Computer Policy update completed. Check Event Viewer for details." | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
     }
 
     catch {
         Write-Host "FAIL: Failed to update Computer Policy. Check Event Viewer for details." -ForegroundColor Yellow
-        "FAIL: Unable to update Computer Policy." | Out-File -FilePath $output -Encoding utf8 -Append
-        $($_.Exception.Message) | Out-File -FilePath $output -Encoding utf8 -Append
+        "FAIL: Unable to update Computer Policy." | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
+        $($_.Exception.Message) | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
     }
 }
 
 function Execute-Actions {
+
+    try {
+        $ccmWMI = Get-WmiObject -Namespace "root\ccm" -Class SMS_Client -ErrorAction Stop
+        if ($ccmWMI) {
+            Write-Host "ConfigMgr client found (WMI verification)." -ForegroundColor Green
+        }
+    } 
+    
+    catch {
+        Write-Warning  "ConfigMgr client not found (WMI verification)."
+    }
+
     Add-Type -AssemblyName PresentationFramework
 
-    # --- Create Configuration Manager client actions as PSCustomObjects ---
+    # --- Configuration Manager client actions ---
 
     $actionsList = @(
         [PSCustomObject]@{ Name = "Machine policy retrieval cycle"; Guid = "{00000000-0000-0000-0000-000000000021}"; IsChecked = $false },
@@ -108,7 +117,7 @@ function Execute-Actions {
         [PSCustomObject]@{ Name = "File collection"; Guid = "{00000000-0000-0000-0000-000000000010}"; IsChecked = $false }
     )
 
-    # --- Build XAML for Configuration Manager client selection GUI ---
+    # --- XAML for task selection GUI ---
 
 $xaml = @"
 <Window xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'
@@ -226,12 +235,12 @@ $xaml = @"
         try {
             Invoke-WmiMethod -Namespace root\ccm -Class SMS_CLIENT -Name TriggerSchedule -ArgumentList $action.Guid -ErrorAction Stop | Out-Null
             Write-Host "SUCCESS: $($action.Name)" -ForegroundColor Green
-            "SUCCESS: $($action.Name)" | Out-File -FilePath $output -Encoding utf8 -Append
+            "SUCCESS: $($action.Name)" | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
         } 
         
         catch {
             Write-Host "FAIL: $($action.Name) $($_.Exception.Message)" -ForegroundColor Red
-            "FAIL: $($action.Name) $($_.Exception.Message)" | Out-File -FilePath $output -Encoding utf8 -Append
+            "FAIL: $($action.Name) $($_.Exception.Message)" | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
         }
         Start-Sleep -Seconds 2
     }
@@ -242,13 +251,13 @@ function Run-DellUpdates {
     $path = 'C:\Program Files\Dell\CommandUpdate\dcu-cli.exe'
     if (Test-Path $path) {
         Start-Sleep -Seconds 2
-        "Dell Command CLI application detected, starting updates..." | Out-File -FilePath $output -Encoding utf8 -Append
+        "Dell Command CLI application detected, starting updates..." | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
         & "$path" /applyUpdates -autoSuspendBitLocker=enable -forceupdate=enable -outputLog='C:\command.log'
     } 
     
     else {
-        Write-Host "WARN: Dell Command application not detected, skipping updates."  -ForegroundColor Yellow
-         "WARN: Dell Command CLI application not detected, skipping updates." | Out-File -FilePath $output -Encoding utf8 -Append
+        Write-Warning "Dell Command application not detected, skipping updates."
+         "WARN: Dell Command CLI application not detected, skipping updates." | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
     }
 }
 
@@ -258,7 +267,7 @@ function Disable-Sleep {
     powercfg /change standby-timeout-ac 0
     powercfg -setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
     Write-Host "SUCCESS: Sleep and Lid Closure action when plugged in is disabled." -ForegroundColor Green
-    "SUCCESS: Sleep and Lid Closure action when plugged in has been disabled." | Out-File -FilePath $output -Encoding utf8 -Append
+    "SUCCESS: Sleep and Lid Closure action when plugged in has been disabled." | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
     Start-Sleep 2
 }
 
@@ -271,14 +280,26 @@ function Remove-TempFiles {
 }
 
 function Update-HostsFile {
-    $hostname = Read-Host "Enter the hostname"
-    $ip = Read-Host "Enter the IP address"
+    [CmdletBinding()] param(
+        [Parameter(Mandatory)]
+        [ValidatePattern('^(?:\d{1,3}\.){3}\d{1,3}$')] $IPAddress,
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()] $Hostname
+    )
+
     $hosts = "$env:SystemRoot\System32\drivers\etc\hosts"
-    $entry = "`n$ip`t$hostname"
-    # Backup the original hosts file
-    Copy-Item $hosts "$hosts.bak" -Force
-    Add-Content -Path $hosts -Value $entry
-    Write-Output "Entry added: $ip $hostname"
+    $backup = "$hosts.$((Get-Date -f yyyyMMddHHmmss)).bak"
+
+    Copy-Item $hosts $backup -Force
+
+    $entry = "$IPAddress`t$Hostname"
+    if (-not (Select-String $hosts -Pattern "^\s*$IPAddress\s+$Hostname\s*$" -SimpleMatch)) {
+        Add-Content $hosts $entry
+        "Added: $entry"
+    }
+    else {
+        "Already exists: $entry"
+    }
 }
 
 function Clear-MSTeams {
@@ -328,7 +349,7 @@ function Generate-AuditReport {
     [CmdletBinding()]
     param (
         [bool]$SortByInstallDate = $false,
-        [string]$OutputPath = $null
+        [string]$Global:LogFilePath = $null
     )
 
     # Get computer name once for subtitle
@@ -435,10 +456,10 @@ function Generate-AuditReport {
 
     # --- Output Configuration ---
 
-    if (-not $OutputPath) {
+    if (-not $Global:LogFilePath) {
         $desktopPath = [Environment]::GetFolderPath('Desktop')
         $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm"
-        $OutputPath = Join-Path -Path $desktopPath -ChildPath "System_Audit_Report_$timestamp.html"
+        $Global:LogFilePath = Join-Path -Path $desktopPath -ChildPath "System_Audit_Report_$timestamp.html"
     }
 
     # --- Build HTML Report ---
@@ -580,76 +601,12 @@ function Generate-AuditReport {
 "@
 
     Try {
-        ($htmlHeader + $htmlBody + $htmlFooter) | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
-        Write-Host "`nSystem audit report generated at:`n$OutputPath"
-        Invoke-Item $OutputPath
+        ($htmlHeader + $htmlBody + $htmlFooter) | Out-File -FilePath $Global:LogFilePath -Encoding UTF8 -Force
+        Write-Host "`nSystem audit report generated at:`n$Global:LogFilePath"
+        Invoke-Item $Global:LogFilePath
     } Catch {
         Write-Error "Failed to write report: $_"
     }
-}
-
-function Copy-RemoteUserData {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory)]
-        [string]$computername,
-
-        [Parameter(Mandatory)]
-        [string]$User,
-
-        [Parameter()]
-        [string]$DestinationRoot = "C:\RemoteFiles"
-    )
-
-    if (-not (Test-Connection -ComputerName $computername -Count 2 -Quiet)) {
-        Write-Error "Host $Host is unreachable."
-        return
-    }
-
-    try {
-        $Session = New-PSSession -ComputerName $computername -ErrorAction Stop
-    }
-    catch {
-        Write-Error "Failed to create remote session: $($_.Exception.Message)"
-        return
-    }
-
-    $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
-    $localDest = Join-Path $DestinationRoot "$computername\$timestamp"
-
-    if (-not (Test-Path $localDest)) {
-        New-Item -ItemType Directory -Path $localDest -Force | Out-Null
-    }
-
-    $folders = @('Desktop','Documents','Downloads','Favorites','Pictures','AppData\Local\Google\Chrome\User Data\Default\Bookmarks','AppData\Roaming\Microsoft\Signatures')
-
-    foreach ($folder in $folders) {
-        $remotePath = "C:\Users\$User\$folder"
-
-        $exists = Invoke-Command -Session $Session -ScriptBlock {
-            param($path)
-            Test-Path $path
-        } -ArgumentList $remotePath
-
-        if (-not $exists) {
-            continue
-        }
-
-        try {
-            Copy-Item -Path $remotePath `
-                      -Destination $localDest `
-                      -FromSession $Session `
-                      -Recurse -Force -ErrorAction Stop
-        }
-        catch {
-            Write-Error "Failed to copy ${folder}: $($_.Exception.Message)"
-
-        }
-    }
-
-    Remove-PSSession $Session
-
-    Write-Host "Transfer complete. Files saved to: $localDest"
 }
 
 # --- Begin Script Logic ---
@@ -658,21 +615,20 @@ Clear-Host
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-# --- Check for elevated user session, elevate if needed and restart script execution ---
+# --- Ensure Administrative Execution ---
 
 $pspath = (Get-Process -Id $PID).Path
 
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    Start-Process $pspath -Verb runAs -ArgumentList '-NoExit', '-ExecutionPolicy RemoteSigned', '-Command', "& {Invoke-WebRequest 'https://agho.me/provision' -UseBasicParsing | Invoke-Expression}"
+    Start-Process $pspath -Verb runAs -ArgumentList '-NoExit', '-ExecutionPolicy RemoteSigned', '-Command', "& {Invoke-WebRequest 'https://agho.me/dev' -UseBasicParsing | Invoke-Expression}"
     Stop-Process -Id $PID
 }
-
-$output = Initialize-Log
 
 $computer = $env:COMPUTERNAME
 $cpu = (Get-CimInstance Win32_Processor | Select-Object -First 1).Name
 $ram = [math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB, 2)
 $bootVolume = [math]::Round((Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'").FreeSpace / 1GB, 2)
+$bios = (Get-CimInstance Win32_BIOS).ReleaseDate.tostring('MM/dd/yyyy')
 
 $messageHeader = @"
 
@@ -689,6 +645,7 @@ $messageDetails = @"
  CPU: $cpu
  Memory: $ram GB
  Boot Volume Free Space: $bootVolume GB
+ BIOS Release Date: $bios
 
 "@
 
@@ -705,17 +662,18 @@ $messageTasks = @"
 "@
 
 $date = Get-Date
-" Execution Date & Time: $date" | Out-File -FilePath $output -Encoding utf8
+
+" Execution Date & Time: $date" | Out-File -FilePath $Global:LogFile -Encoding utf8
 
 Write-Host $messageHeader -ForegroundColor Cyan
-$messageHeader | Out-File -FilePath $output -Encoding utf8 -Append
+$messageHeader | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
 Write-Host $messageDetails
-$messageDetails | Out-File -FilePath $output -Encoding utf8 -Append
+$messageDetails | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
 Write-Host $messageTasks
-"Task Execution Logs:" | Out-File -FilePath $output -Encoding utf8 -Append
-" " | out-File -FilePath $output -Encoding utf8 -Append
 
-# --- Retrieve user input and launch selection window upon confirmation ---
+"Task Execution Logs:`n" | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
+
+# --- Retrieve user input and launch selection window upon explicit confirmation ---
 
 while (($i = Read-Host " Press Y to continue or N to quit") -notmatch '^[YyNn]$') {}
 if ($i -notmatch '^[Yy]$') { exit }
@@ -943,9 +901,9 @@ if ($sel.AuditReport) {
     Generate-AuditReport
 }
 
-" " | Out-File -FilePath $output -Encoding utf8 -Append
-"Script execution complete." | Out-File -FilePath $output -Encoding utf8 -Append
+"`nScript execution complete." | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
+
 Write-Host "Script execution complete. See:"
-Write-Host "$output" -Foregroundcolor Gray
+Write-Host "$Global:LogFile" -Foregroundcolor Gray
 
 Start-Sleep 1
