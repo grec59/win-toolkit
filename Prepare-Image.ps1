@@ -7,12 +7,18 @@
     - Create a local user account
     - Disable sleep on AC
     - Remove temporary files
+    - Add system hosts entry
+    - Repair Microsoft Teams
+    - Generate Audit Report
 
 .NOTES
-    - Requires administrative privileges.
-    - Designed for interactive use with GUI-based action selection.    
-    - Outputs log to C:\results.txt
-    - Not compatible with command-line execution (PS-Remoting, PsExec)
+    - Requires administrative privileges
+    - Designed for interactive use with GUI-based action selection
+    - Logging to C:\results.txt is basic.
+    - Incompatible with command-line execution (PS-Remoting, PsExec)
+    - Initial Configuration Manager task selection interrupts unattenteded execution.
+    - Dell BIOS updates may fail on some models through CLI utility.
+    - Microsoft Teams application repair is per-user installation through MSIX.
 
 .EXAMPLE
   .\Prepare-Image.ps1 
@@ -645,7 +651,7 @@ $messageDetails = @"
  CPU: $cpu
  Memory: $ram GB
  Boot Volume Free Space: $bootVolume GB
- BIOS Release Date: $bios
+ BIOS: $bios
 
 "@
 
