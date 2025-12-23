@@ -62,7 +62,7 @@ Upon execution, this script shows a basic system summary and prompts the user fo
 2. Dell Command - Firmware updates may require application whitelisting approval to begin installation.
 3. Dell Command - Launching update utility may fail if Dell Command is self-updating.
 4. System Audit report does not support printing due to interactive tables.
-5. Logging to user profile Desktop is incomplete and in active development.
+5. Logging to user profile Desktop is incomplete and under development.
 
 ## Notes
    
