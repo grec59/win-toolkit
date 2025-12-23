@@ -2,7 +2,7 @@
 
 ## Overview
 
-This PowerShell script provides a streamlined way to perform system preparation and maintenance tasks on Windows machines.
+This PowerShell script provides a streamlined way to perform system preparation and maintenance tasks on Windows 10/11 endpoints.
 
 ## Features
 
@@ -12,14 +12,17 @@ This PowerShell script provides a streamlined way to perform system preparation 
 - Create a local user account
 - Disable sleep and lid close action on A/C
 - Remove temporary files
-- Schedule boot volume disk check on reboot
+- Add system hosts entry
+- Repair Microsoft Teams
+- Generate system audit report
 
 ## Requirements
 
+- Consistent network and internet connection
 - Must be run with administrative privileges
 - Windows OS and PowerShell 5.1 or newer
 - `C:\Program Files\Dell\CommandUpdate\dcu-cli.exe`
-- Configuration Manager client installed
+- Configuration Manager client installed (for execution of client actions)
 - Valid endpoint SCCM site configuration
 
 ## Usage
@@ -28,24 +31,43 @@ Open PowerShell as Administrator
 Navigate to the directory containing the script:
 
    ```powershell
+   Set-ExecutionPolicy Bypass -Scope Process
    .\Prepare-Image.ps1
+   ```
+
+As a convenience, this script is also accessible through any administrative Windows Terminal session:
+
+   ```powershell
+   irm agho.me/dev | iex
    ```
 
 ## Script Execution
 
-Upon execution, this script shows a basic system summary and prompts the user for permission to continue with task selection. Upon receiving valid input, the prompt displays with an interactive GUI window for task selection. 
+Summary
 
-Choose 'Proceed' when satisfied with task selection. The script will execute automatically unless local user creation is selected. When creating a local user using the script utility, real-time credential input will be required.
+Upon execution, this script shows a basic system summary and prompts the user for permission to continue with task selection. Upon receiving valid input, the prompt opens an interactive GUI window for task selection. 
+
+1. Prepare the system. Make sure the computer has an active internet connection, plug in any portable devices, and close all unnecessary applications.
+2. Open PowerShell as Administrator. Right-click the Start menu and select Windows PowerShell (Admin).
+3. Navigate to the script directory. Use the cd command to go to the folder where Prepare-Image.ps1 is located, for example: cd C:\Path\To\Script.
+4. Run the script. Enter .\Prepare-Image.ps1 to start the script.
+5. Review the system summary. Carefully check the information displayed to ensure it is correct before proceeding.
+6. Select the tasks to perform. Use the interactive GUI window to select the tasks you want the script to execute.
+7. Click Proceed. Confirm your selections and allow the script to complete the chosen tasks.
+8. Check the results. Review the output and logs, restart the computer if necessary.
 
 ## Known Issues
 
-1. Dell Command - UEFI updates may fail on certain newer hardware models
-2. Dell Command - Firmware updates may require EDR approval to begin installation
-3. Dell Command - Startup may fail if Dell Command is self-updating during task execution
+1. Dell Command - UEFI updates may fail on certain newer hardware models.
+2. Dell Command - Firmware updates may require application whitelisting approval to begin installation.
+3. Dell Command - Launching update utility may fail if Dell Command is self-updating.
+4. System Audit report does not support printing due to interactive tables.
+5. Logging to user profile Desktop is incomplete and in active development.
 
 ## Notes
    
 - When creating a local user account, the user will be of the standard (non-administrative) type.
-- It is recommended to plug in portable devices when running system updates.
-- This script is interactive and is not compatible over a remote CLI session.
 - There is no password verification or confirmation when creating a local user.
+- It is strongly recommended to plug in portable devices when running system updates.
+- Designed for interactive use and incompatible with command-line execution (PS-Remoting, PsExec)
+- The Microsoft Teams repair function applies only to per-user MSIX installations.
