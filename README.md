@@ -43,6 +43,7 @@ Navigate to the directory containing the script:
 
    ```powershell
    Set-ExecutionPolicy Bypass -Scope Process
+
    .\Prepare-Image.ps1
    ```
 
