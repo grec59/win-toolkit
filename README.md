@@ -16,6 +16,17 @@ This PowerShell script provides a streamlined way to perform system preparation 
 - Repair Microsoft Teams
 - Generate system audit report
 
+Features in Development
+
+- Unattended script execution
+- Remoting compatibility (PS-Remoting, PsExec)
+- Microsoft Configuration Manager client repair
+- Software Center rebase / reset
+- Network computer data transfer
+- Automatic system diagnostic report and bundle
+- Secure Boot and TPM 2.0 status on startup
+- Enable Remote Desktop service
+
 ## Requirements
 
 - Consistent network and internet connection
@@ -47,13 +58,13 @@ Summary
 
 Upon execution, this script shows a basic system summary and prompts the user for permission to continue with task selection. Upon receiving valid input, the prompt opens an interactive GUI window for task selection. 
 
-1. Prepare the system. Make sure the computer has an active internet connection, plug in any portable devices, and close all unnecessary applications.
-2. Open PowerShell as Administrator. Right-click the Start menu and select Windows PowerShell (Admin) or Terminal (Admin).
+1. Ensure the computer has an active internet connection, plug in portable devices, and close all applications.
+2. Right-click the Start menu and select Windows PowerShell (Admin) or Terminal (Admin).
 3. Use the `cd` command to go to the folder where Prepare-Image.ps1 is located.
 4. Enter `.\Prepare-Image.ps1` to start the script.
 5. Review the information displayed to ensure it is correct before proceeding.
 6. Use the interactive GUI window to select the tasks you want the script to execute.
-7. Confirm selections and allow the script to complete the chosen tasks.
+7. Confirm task selections and allow the script to complete execution.
 8. Review the output and logs, restart the computer if necessary.
 
 ## Known Issues
@@ -61,8 +72,8 @@ Upon execution, this script shows a basic system summary and prompts the user fo
 1. Dell Command - UEFI updates may fail on certain newer hardware models.
 2. Dell Command - Firmware updates may require application whitelisting approval to begin installation.
 3. Dell Command - Launching update utility may fail if Dell Command is self-updating.
-4. System Audit report does not support printing due to interactive tables.
-5. Logging to user profile Desktop is incomplete and under development.
+4. System Audit report does not support printing due to interactive tables. (fix in development)
+5. Logging to user profile Desktop is incomplete and under development. (fix in development)
 
 ## Notes
    
@@ -71,3 +82,7 @@ Upon execution, this script shows a basic system summary and prompts the user fo
 - It is strongly recommended to plug in portable devices when running system updates.
 - Designed for interactive use and incompatible with command-line execution (PS-Remoting, PsExec)
 - The Microsoft Teams repair function applies only to per-user MSIX installations.
+
+This PowerShell script is under active development. Please review the code before execution and report unexpected behavior.
+
+Significant structural changes will be made as future updates focus on maintainability, security, and bug fixes.
