@@ -48,13 +48,13 @@ Summary
 Upon execution, this script shows a basic system summary and prompts the user for permission to continue with task selection. Upon receiving valid input, the prompt opens an interactive GUI window for task selection. 
 
 1. Prepare the system. Make sure the computer has an active internet connection, plug in any portable devices, and close all unnecessary applications.
-2. Open PowerShell as Administrator. Right-click the Start menu and select Windows PowerShell (Admin).
-3. Navigate to the script directory. Use the cd command to go to the folder where Prepare-Image.ps1 is located, for example: cd C:\Path\To\Script.
-4. Run the script. Enter .\Prepare-Image.ps1 to start the script.
-5. Review the system summary. Carefully check the information displayed to ensure it is correct before proceeding.
-6. Select the tasks to perform. Use the interactive GUI window to select the tasks you want the script to execute.
-7. Click Proceed. Confirm your selections and allow the script to complete the chosen tasks.
-8. Check the results. Review the output and logs, restart the computer if necessary.
+2. Open PowerShell as Administrator. Right-click the Start menu and select Windows PowerShell (Admin) or Terminal (Admin).
+3. Use the `cd` command to go to the folder where Prepare-Image.ps1 is located.
+4. Enter `.\Prepare-Image.ps1` to start the script.
+5. Review the information displayed to ensure it is correct before proceeding.
+6. Use the interactive GUI window to select the tasks you want the script to execute.
+7. Confirm selections and allow the script to complete the chosen tasks.
+8. Review the output and logs, restart the computer if necessary.
 
 ## Known Issues
 
