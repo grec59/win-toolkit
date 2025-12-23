@@ -2,7 +2,7 @@
 
 ## Overview
 
-This PowerShell script provides a streamlined way to perform system preparation and maintenance tasks on Windows 10/11 endpoints.
+This PowerShell script provides a streamlined way to perform system preparation and maintenance tasks on Windows 10 or 11 operating systems.
 
 ## Features
 
@@ -73,8 +73,8 @@ Upon execution, this script shows a basic system summary and prompts the user fo
 1. Dell Command - UEFI updates may fail on certain newer hardware models.
 2. Dell Command - Firmware updates may require application whitelisting approval to begin installation.
 3. Dell Command - Launching update utility may fail if Dell Command is self-updating.
-4. System Audit report does not support printing due to interactive tables. (fix in development)
-5. Logging to user profile Desktop is incomplete and under development. (fix in development)
+4. System Audit - generated report does not support printing due to interactive tables. (fix pending)
+5. Logging - user profile Desktop logic is incomplete and logging is under development. (fix pending)
 
 ## Notes
    
