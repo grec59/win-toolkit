@@ -27,7 +27,9 @@
 # --- Begin Function Definitions ---
 
 function Initialize-Log {
-    New-Item -Path C:\results.txt -ItemType File -Force -ErrorAction SilentlyContinue | Out-Null
+    $path = 'C:\results.txt'
+    New-Item -Path $path -ItemType File -Force -ErrorAction SilentlyContinue | Out-Null
+    return $path
 }
 
 $Global:LogFile = Initialize-Log
