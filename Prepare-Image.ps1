@@ -317,8 +317,6 @@ function Clear-MSTeams {
         } else {
             Write-Host "Teams cache not found for: $($user.Name)" -ForegroundColor Yellow
         }
-
-        Start-Sleep -Seconds 2
     }
 
     # Download the Microsoft Teams offline installer
@@ -328,12 +326,19 @@ function Clear-MSTeams {
 
     Write-Host "Downloading Microsoft Teams installer..." -ForegroundColor Cyan
 
+    # Disable progress rendering (MAJOR speed improvement)
+    $oldProgressPreference = $ProgressPreference
+    $ProgressPreference = 'SilentlyContinue'
+
     try {
         Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath -UseBasicParsing
         Write-Host "Download completed: $installerPath" -ForegroundColor Green
     } catch {
         Write-Host "Error downloading installer: $_" -ForegroundColor Red
         return
+    } finally {
+        # Restore original preference
+        $ProgressPreference = $oldProgressPreference
     }
 
     # Launch the installer
