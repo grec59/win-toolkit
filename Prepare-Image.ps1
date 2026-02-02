@@ -351,267 +351,220 @@ function Clear-MSTeams {
 }
 
 function Generate-AuditReport {
-    [CmdletBinding()]
-    param (
-        [bool]$SortByInstallDate = $false,
-        [string]$Global:LogFilePath = $null
+    [CmdletBinding()] param([string]$LogFilePath)
+
+    Add-Type -AssemblyName System.Web
+    $safe = { param($v) if ($null -eq $v) { "" } else { [System.Web.HttpUtility]::HtmlEncode($v.ToString()) } }
+
+    $cs = Get-CimInstance Win32_ComputerSystem -ErrorAction SilentlyContinue
+    $os = Get-CimInstance Win32_OperatingSystem -ErrorAction SilentlyContinue
+
+    $dateGenerated = "Generated on $(Get-Date -f 'dddd, MMMM dd, yyyy hh:mm tt') $((Get-TimeZone).StandardName)"
+    $computerName = &$safe $env:COMPUTERNAME
+    $domain       = &$safe $cs.Domain
+    $installDate  = if ($os.InstallDate) { $os.InstallDate.ToLocalTime() } else { "N/A" }
+
+    $diskMap = @{}
+    Get-Disk -ErrorAction SilentlyContinue | ForEach-Object {
+        $diskMap[$_.Number] = if ($_.FriendlyName) { $_.FriendlyName } else { $_.Model }
+    }
+
+    $disks = Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" -ErrorAction SilentlyContinue |
+        ForEach-Object {
+            $letter    = $_.DeviceID.TrimEnd(':')
+            $partition = Get-Partition -DriveLetter $letter -ErrorAction SilentlyContinue
+            [pscustomobject]@{
+                Drive = $_.DeviceID
+                Model = if ($partition -and $diskMap.ContainsKey($partition.DiskNumber)) { $diskMap[$partition.DiskNumber] } else { 'Not Available' }
+                Used  = [math]::Round(($_.Size - $_.FreeSpace)/1GB,1)
+                Free  = [math]::Round($_.FreeSpace/1GB,1)
+            }
+        }
+
+    $sidToString = {
+        param($sid)
+        if ($sid -is [System.Security.Principal.SecurityIdentifier]) { $sid.Value }
+        elseif ($sid -is [byte[]]) { (New-Object System.Security.Principal.SecurityIdentifier($sid,0)).Value }
+        else { [string]$sid }
+    }
+
+    $adminSidStrings = @()
+    try {
+        $adminSidStrings = Get-LocalGroupMember Administrators -ErrorAction Stop |
+            Where-Object ObjectClass -eq 'User' |
+            ForEach-Object { & $sidToString $_.SID }
+    } catch {
+        $admins = [ADSI]"WinNT://./Administrators,group"
+        $admins.Invoke("Members") | ForEach-Object { $adminSidStrings += & $sidToString $_.objectSID }
+    }
+
+    $localUsers = Get-LocalUser -ErrorAction SilentlyContinue |
+        ForEach-Object {
+            $sidValue = & $sidToString $_.SID
+            $type     = if ($adminSidStrings -contains $sidValue) { 'Administrator' } else { 'Standard' }
+
+            [pscustomobject]@{
+                Name            = $_.Name
+                Enabled         = $_.Enabled
+                LastLogon       = $_.LastLogon
+                PasswordExpires = $_.PasswordExpires
+                Type            = $type
+            }
+        }
+
+    $networks   = Get-NetIPConfiguration -ErrorAction SilentlyContinue
+    $shares     = Get-SmbShare -ErrorAction SilentlyContinue
+    $printers   = Get-Printer -ErrorAction SilentlyContinue
+
+    $displays = Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue |
+        Sort-Object { if ($_.Name -match "Intel") { 1 } else { 0 } }
+
+    $updates = Get-CimInstance Win32_QuickFixEngineering -ErrorAction SilentlyContinue |
+        Sort-Object InstalledOn -Descending |
+        Select-Object -First 5
+
+    $excludeEnv = 'ALLUSERSPROFILE','ComSpec','CommonProgramFiles','CommonProgramFiles(x86)',
+                  'CommonProgramW6432','HOMEDRIVE','HOMEPATH','LOCALAPPDATA','LOGONSERVER',
+                  'NUMBER_OF_PROCESSORS','OS','Path','PATHEXT','PROCESSOR_ARCHITECTURE',
+                  'PROCESSOR_IDENTIFIER','PROCESSOR_LEVEL','PROCESSOR_REVISION',
+                  'ProgramData','ProgramFiles','ProgramFiles(x86)','ProgramW6432',
+                  'PUBLIC','SystemDrive','SystemRoot','TEMP','TMP','USERDOMAIN',
+                  'USERNAME','USERPROFILE','windir'
+
+    $envVars = Get-ChildItem Env: | Where-Object { $excludeEnv -notcontains $_.Name } | Sort Name
+
+    $software = @(
+        Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* -ErrorAction SilentlyContinue
+        Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* -ErrorAction SilentlyContinue
+    ) | Where-Object { $_.DisplayName } |
+      Select-Object DisplayName, Publisher |
+      Sort-Object DisplayName -Unique
+
+    $printers = $printers | Sort-Object @(
+        @{ Expression = { if ($_.Shared -or $_.PortName -match 'IP|WSD|DOT4|USB|LPT') { 0 } else { 1 } }; Ascending = $true },
+        @{ Expression = { $_.Name }; Ascending = $true }
     )
 
-    # Get computer name once for subtitle
-    $computerNameRaw = $env:COMPUTERNAME
-    $computerName = [System.Web.HttpUtility]::HtmlEncode($computerNameRaw)  # Simple HTML encode
+    $softwareHtml = $software | ForEach-Object {
+        $pub = if ($_.Publisher) { " — $(& $safe $_.Publisher)" } else { "" }
+        "<div class='software-item'><strong>$(& $safe $_.DisplayName)</strong>$pub</div>"
+    } | Out-String
 
-    # Get computer domain
-    Try {
-        $domainRaw = (Get-CimInstance Win32_ComputerSystem).Domain
-        $domain = if ($domainRaw) { [System.Web.HttpUtility]::HtmlEncode($domainRaw) } else { "N/A" }
-    } Catch {
-        $domain = "N/A"
+    $renderList = {
+        param($items, $template)
+        $items | ForEach-Object { & $template $_ } | Out-String
     }
 
-    # Initialize ordered hashtable for report sections
-    $report = [ordered]@{}
-
-    # --- Collect System Information ---
-    Try {
-        $report["System Info"] = Get-ComputerInfo | Select-Object CsName, WindowsVersion, WindowsBuildLabEx, OsArchitecture, CsManufacturer, CsModel
-    } Catch { Write-Warning "Failed to get system info: $_" }
-
-    Try {
-        $report["Local Users"] = Get-LocalUser | Select Name, FullName, Enabled, PasswordLastSet
-    } Catch { Write-Warning "Failed to get local users: $_" }
-
-    Try {
-        $report["Printers"] = Get-Printer | Select Name, Type, DriverName, PortName, Shared
-    } Catch { Write-Warning "Failed to get printers: $_" }
-
-    Try {
-        $report["SMB Shares"] = Get-SmbShare | Select Name, Path, Description, ShareState
-    } Catch { Write-Warning "Failed to get SMB shares: $_" }
-
-    Try {
-        $excludedPublishers = @("Microsoft", "Advanced Micro Devices, Inc.", "Intel Corporation")
-
-        $installedSoftware = Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*, `
-                                              HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* `
-                                              -ErrorAction SilentlyContinue |
-            Where-Object { 
-                $_.DisplayName -and 
-                ($excludedPublishers -notcontains $_.Publisher)
-            } |
-            Select-Object DisplayName, DisplayVersion, Publisher, InstallDate
-
-        # Safe install date parsing helper
-        function Parse-InstallDate($date) {
-            if ([string]::IsNullOrWhiteSpace($date)) { return [datetime]::MinValue }
-            try {
-                return [datetime]::ParseExact($date, 'yyyyMMdd', $null)
-            } catch {
-                return [datetime]::MinValue
-            }
-        }
-
-        if ($SortByInstallDate) {
-            $report["Installed Software"] = $installedSoftware | Sort-Object @{Expression = { Parse-InstallDate $_.InstallDate }}
-        } else {
-            $report["Installed Software"] = $installedSoftware | Sort-Object DisplayName
-        }
-    } Catch { Write-Warning "Failed to get installed software: $_" }
-
-    Try {
-        # Use Win32_LogicalDisk for disk usage info
-        $report["Disk Usage"] = Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | Select-Object DeviceID,
-            @{Name='Used(GB)';Expression={[math]::Round(($_.Size - $_.FreeSpace)/1GB,1)}},
-            @{Name='Free(GB)';Expression={[math]::Round($_.FreeSpace/1GB,1)}}
-    } Catch { Write-Warning "Failed to get disk usage: $_" }
-
-    # FIXED Network Info section: Convert DNSServer addresses to comma-separated string safely
-    Try {
-        $report["Network Info"] = Get-NetIPConfiguration | ForEach-Object {
-            [PSCustomObject]@{
-                InterfaceAlias       = $_.InterfaceAlias
-                IPv4                 = ($_.IPv4Address.IPAddress)
-                IPv6                 = ($_.IPv6Address.IPAddress)
-                DNSServer            = if ($_.DNSServer) { ($_.DNSServer.ServerAddresses -join ', ') } else { '' }
-                InterfaceDescription = $_.InterfaceDescription
-            }
-        }
-    } Catch { Write-Warning "Failed to get network info: $_" }
-
-    Try {
-        $report["C:\ Directory"] = Get-ChildItem C:\ -ErrorAction SilentlyContinue | Select LastWriteTime, Name, Attributes
-    } Catch { Write-Warning "Failed to list C:\ directory: $_" }
-
-    Try {
-        $report["C:\Users Directory"] = Get-ChildItem C:\Users -ErrorAction SilentlyContinue | Select LastWriteTime, Name, Attributes
-    } Catch { Write-Warning "Failed to list C:\Users directory: $_" }
-
-    # Get last 5 installed Windows updates
-    Try {
-        $lastUpdates = Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 5 |
-                       Select-Object HotFixID, InstalledOn, Description
-        $report["Last 5 Windows Updates"] = $lastUpdates
-    } Catch { Write-Warning "Failed to get Windows updates: $_" }
-
-    # Get environment variables
-    Try {
-        $envVars = Get-ChildItem Env: | Sort-Object Name | Select-Object Name, Value
-        $report["Environment Variables"] = $envVars
-    } Catch { Write-Warning "Failed to get environment variables: $_" }
-
-    # --- Output Configuration ---
-
-    if (-not $Global:LogFilePath) {
-        $desktopPath = [Environment]::GetFolderPath('Desktop')
-        $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm"
-        $Global:LogFilePath = Join-Path -Path $desktopPath -ChildPath "System_Audit_Report_$timestamp.html"
-    }
-
-    # --- Build HTML Report ---
-
-    $dateGenerated = Get-Date -Format "dddd, MMMM dd yyyy HH:mm"
-    $htmlHeader = @"
+    $html = @"
 <html>
 <head>
-    <title>System Audit Report</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f9;
-            margin: 30px auto;
-            max-width: 1200px;
-            color: #333;
-        }
-        .header-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
-            border-bottom: 1.5px solid #ccc;
-            padding-bottom: 10px;
-        }
-        .left-block, .right-block {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-        .left-block {
-            align-items: flex-start;
-        }
-        .right-block {
-            align-items: flex-end;
-            text-align: right;
-        }
-        h1 {
-            font-size: 2.4em;
-            color: #004d99;
-            margin: 0 0 6px 0;
-            font-weight: 600;
-            line-height: 1.1;
-        }
-        .generated-date {
-            font-size: 1em;
-            color: #666;
-            margin: 0;
-            font-weight: 400;
-        }
-        h2.subtitle {
-            font-size: 1.2em;
-            font-weight: 500;
-            color: #333;
-            margin: 0 0 4px 0;
-        }
-        h3.domain {
-            font-size: 1em;
-            font-weight: 400;
-            color: #666;
-            margin: 0;
-        }
-        h2.section-title {
-            color: #007acc;
-            border-bottom: 3px solid #007acc;
-            padding-bottom: 6px;
-            margin-top: 40px;
-        }
-        .section {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-            padding: 0;
-            max-height: 380px;
-            overflow-y: auto;
-            margin-bottom: 30px;
-            position: relative;
-            z-index: 0;
-            overflow-anchor: none;
-        }
-        table {
-            border-collapse: separate;
-            border-spacing: 0;
-            width: 100%;
-            font-size: 0.9em;
-            table-layout: fixed;
-            word-wrap: break-word;
-            background-color: white;
-        }
-        th, td {
-            border: 1px solid #d1d9e6;
-            padding: 12px 10px;
-            text-align: left;
-            vertical-align: top;
-            background-clip: padding-box;
-        }
-        thead {
-            background-color: #e1ecf9;
-        }
-        thead th {
-            position: sticky;
-            top: 0;
-            z-index: 15;
-            color: #004d99;
-            box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1);
-            border-bottom: 2px solid #007acc;
-        }
-        tbody tr:nth-child(even) {
-            background-color: #f9fbfd;
-        }
-    </style>
+<meta charset='utf-8'>
+<title>System Audit Report</title>
+<style>
+@page{size:letter;margin:.25in}
+body{font-family:'Segoe UI',Arial;font-size:10px;margin:.25in}
+.header{display:flex;justify-content:space-between;border-bottom:2px solid #004d99;padding-bottom:4px}
+h1{color:#004d99;margin:0;font-size:18px}
+.section{margin-top:10px}
+.section h2{font-size:11px;color:#004d99;border-bottom:1px solid #ccc;margin-bottom:4px;text-transform:uppercase}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 20px;margin-top:4px}
+.columns-2{columns:2;column-gap:14px}
+.columns-2 li{break-inside:avoid-column;-webkit-column-break-inside:avoid;page-break-inside:avoid}
+ul{margin:0;padding-left:18px}
+li{margin-bottom:4px;line-height:1.25;word-break:break-word;overflow-wrap:anywhere}
+table{width:100%;border-collapse:collapse}
+td{padding:2px 4px;border-bottom:1px solid #eee;vertical-align:top;word-break:break-word;overflow-wrap:anywhere}
+.small table{font-size:9px;table-layout:fixed}
+.env-list{margin:0;padding-left:18px;list-style:disc;columns:2;column-gap:14px}
+.env-list li{margin-bottom:4px;break-inside:avoid-column}
+.env-value{word-break:break-word;overflow-wrap:anywhere}
+.software-table{columns:2;column-gap:14px;font-size:9px}
+.software-table .software-item{padding:2px 4px;break-inside:avoid-column}
+.software-table .software-item:nth-child(odd){background:#f6f6f6}
+</style>
 </head>
 <body>
-    <div class='header-container'>
-        <div class='left-block'>
-            <h1>System Audit Report</h1>
-            <div class='generated-date'>Generated on $dateGenerated</div>
-        </div>
-        <div class='right-block'>
-            <h2 class='subtitle'>Computer Name: $computerName</h2>
-            <h3 class='domain'>Domain: $domain</h3>
-        </div>
-    </div>
-"@
+<div class="header">
+  <div>
+    <h1>System Audit Report</h1>
+    <div>$dateGenerated</div>
+  </div>
+  <div style="text-align:right">
+    <div><strong>Computer:</strong> $computerName</div>
+    <div><strong>Domain:</strong> $domain</div>
+  </div>
+</div>
 
-    $htmlBody = ""
-    foreach ($section in $report.GetEnumerator()) {
-        if ($section.Value -ne $null -and $section.Value.Count -gt 0) {
-            $htmlBody += "<h2 class='section-title'>$($section.Key)</h2><div class='section'>"
-            $htmlBody += ($section.Value | ConvertTo-Html -Fragment)
-            $htmlBody += "</div>"
-        }
-    }
+<div class="section">
+  <h2>System Summary</h2>
+  <div class='summary-grid'>
+    <div><strong>Model:</strong> $(& $safe $cs.Model)</div>
+    <div><strong>Manufacturer:</strong> $(& $safe $cs.Manufacturer)</div>
+    <div><strong>Operating System:</strong> $(& $safe $os.Caption) ($(& $safe $os.OSArchitecture))</div>
+    <div><strong>Install Date:</strong> $installDate</div>
+  </div>
+</div>
 
-    $htmlFooter = @"
+<div class="section"><h2>Local Users</h2><ul class="columns-2">
+$($renderList.Invoke($localUsers, {
+    param($u)
+    "<li><strong>$(& $safe $u.Name)</strong><br>Type: $(& $safe $u.Type)<br>Enabled: $($u.Enabled)<br>Last Logon: $($u.LastLogon)<br>Password Expires: $($u.PasswordExpires)</li>"
+}))
+</ul></div>
+
+<div class="section"><h2>Disks</h2><ul class="columns-2">
+$($renderList.Invoke($disks, { param($d) "<li><strong>$($d.Drive)</strong> — $(& $safe $d.Model)<br>Used: $($d.Used) GB | Free: $($d.Free) GB</li>" }))
+</ul></div>
+
+<div class="section"><h2>Networks</h2><ul class="columns-2">
+$($renderList.Invoke($networks, { param($n) "<li><strong>$(& $safe $n.InterfaceAlias)</strong><br>Description: $(& $safe $n.InterfaceDescription)<br>IPv4: $($n.IPv4Address.IPAddress -join ', ')<br>IPv6: $($n.IPv6Address.IPAddress -join ', ')<br>DNS: $($n.DNSServer.ServerAddresses -join ', ')</li>" }))
+</ul></div>
+
+<div class="section"><h2>Display Devices</h2><ul class="columns-2">
+$($renderList.Invoke($displays, { param($d) "<li><strong>$(& $safe $d.Name)</strong><br>Driver Version: $($d.DriverVersion)</li>" }))
+</ul></div>
+
+<div class="section"><h2>Latest Windows Updates</h2><ul class="columns-2">
+$($renderList.Invoke($updates, {
+    param($u)
+    $date = if ($u.InstalledOn) { (Get-Date $u.InstalledOn).ToString('MM/dd/yyyy') } else { 'Unknown' }
+    "<li><strong>$(& $safe $u.HotFixID)</strong><br>Type: $(& $safe $u.Description)<br>Installed On: $date</li>"
+}))
+</ul></div>
+
+<div class="section"><h2>Local Shares</h2><ul class="columns-2">
+$($renderList.Invoke($shares, { param($s) "<li><strong>$(& $safe $s.Name)</strong><br>Path: $(& $safe $s.Path)<br>Description: $(& $safe $s.Description)<br>Status: $($s.ShareState)</li>" }))
+</ul></div>
+
+<div class="section"><h2>Printers</h2><ul class="columns-2">
+$($renderList.Invoke($printers, { param($p) "<li><strong>$(& $safe $p.Name)</strong><br>Driver: $(& $safe $p.DriverName)<br>Type: $($p.Type)<br>Shared: $($p.Shared)<br>Port: $(& $safe $p.PortName)</li>" }))
+</ul></div>
+
+<div class="section"><h2>Environment Variables</h2>
+<ul class="env-list">
+$($renderList.Invoke($envVars, { param($e) "<li><strong>$(& $safe $e.Name)</strong><br><span class='env-value'>Value: $(& $safe $e.Value)</span></li>" }))
+</ul>
+</div>
+
+<div class="section small">
+<h2>Installed Software</h2>
+<div class="software-table">
+$softwareHtml
+</div>
+</div>
+
 </body>
 </html>
 "@
 
-    Try {
-        ($htmlHeader + $htmlBody + $htmlFooter) | Out-File -FilePath $Global:LogFilePath -Encoding UTF8 -Force
-        Write-Host "`nSystem audit report generated at:`n$Global:LogFilePath"
-        Invoke-Item $Global:LogFilePath
-    } Catch {
-        Write-Error "Failed to write report: $_"
+    if (-not $LogFilePath) {
+        $base = [Environment]::GetFolderPath('Desktop')
+        if (-not (Test-Path $base)) { $base = $env:TEMP }
+        $LogFilePath = Join-Path $base "System_Audit_Report.html"
     }
+
+    $html | Out-File $LogFilePath -Encoding UTF8 -Force
+    Invoke-Item $LogFilePath
 }
 
 # --- Begin Script Logic ---
@@ -662,7 +615,7 @@ $messageTasks = @"
  - Install Dell system updates
  - Create a local user account
  - Disable sleep on AC
- - Remove temporary files
+ - and much more..
 
 "@
 
