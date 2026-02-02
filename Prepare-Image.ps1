@@ -754,10 +754,10 @@ $xaml = @"
                 </CheckBox>
 
                 <CheckBox Name="cbEditHosts" Margin="5"
-                          ToolTip="Add local hosts file entry for DNS resolution.">
+                          ToolTip="Add local hosts file entry for static DNS resolution.">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE211;" FontSize="16" Margin="6,0,8,0"/>
-                        <TextBlock Text="Update local hosts file"/>
+                        <TextBlock Text="Add system hosts entry"/>
                     </StackPanel>
                 </CheckBox>
 
