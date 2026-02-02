@@ -446,7 +446,7 @@ function Generate-AuditReport {
     )
 
     $softwareHtml = $software | ForEach-Object {
-        $pub = if ($_.Publisher) { " — $(& $safe $_.Publisher)" } else { "" }
+        $pub = if ($_.Publisher) { " - $(& $safe $_.Publisher)" } else { "" }
         "<div class='software-item'><strong>$(& $safe $_.DisplayName)</strong>$pub</div>"
     } | Out-String
 
@@ -513,7 +513,7 @@ $($renderList.Invoke($localUsers, {
 </ul></div>
 
 <div class="section"><h2>Disks</h2><ul class="columns-2">
-$($renderList.Invoke($disks, { param($d) "<li><strong>$($d.Drive)</strong> — $(& $safe $d.Model)<br>Used: $($d.Used) GB | Free: $($d.Free) GB</li>" }))
+$($renderList.Invoke($disks, { param($d) "<li><strong>$($d.Drive)</strong> - $(& $safe $d.Model)<br>Used: $($d.Used) GB | Free: $($d.Free) GB</li>" }))
 </ul></div>
 
 <div class="section"><h2>Networks</h2><ul class="columns-2">
