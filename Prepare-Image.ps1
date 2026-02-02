@@ -305,17 +305,19 @@ function Clear-MSTeams {
     Write-Host "Stopping Microsoft Teams processes..." -ForegroundColor Cyan
     Get-Process *teams* -ErrorAction SilentlyContinue | Stop-Process -Force
 
-    # Prompt user to select profile(s)
-    $users = Get-ChildItem C:\Users | Out-GridView -PassThru
+    # Clear Teams cache
+    Get-ChildItem C:\Users -Directory | ForEach-Object {
+        $userProfile = $_.FullName
+        $paths = @(
+            Join-Path $userProfile "AppData\Local\Packages\MSTeams_8wekyb3d8bbwe"
+            Join-Path $userProfile "AppData\Roaming\Microsoft\Teams"
+        )
 
-    foreach ($user in $users) {
-        $teamsCachePath = Join-Path -Path $user.FullName -ChildPath "AppData\Local\Packages\MSTeams_8wekyb3d8bbwe"
-
-        if (Test-Path $teamsCachePath) {
-            Remove-Item -Path $teamsCachePath -Recurse -Force -ErrorAction SilentlyContinue
-            Write-Host "Cleared Teams cache for: $($user.Name)" -ForegroundColor Green
-        } else {
-            Write-Host "Teams cache not found for: $($user.Name)" -ForegroundColor Yellow
+        foreach ($path in $paths) {
+            if (Test-Path $path) {
+                Remove-Item -Path $path -Recurse -Force -ErrorAction SilentlyContinue
+                Write-Output "Cleared Teams cache for $($_.Name) at $path"
+            }
         }
     }
 
