@@ -323,8 +323,8 @@ function Clear-MSTeams {
 
     # Download the Microsoft Teams offline installer
     $installerUrl = "https://go.microsoft.com/fwlink/?linkid=2196106"
-    $user = (Get-Process explorer -IncludeUserName).UserName.Split("\")[-1]
-    $installerPath = "C:\Users\$user\AppData\Local\Temp\MSTeams-x64.msix"
+    # $user = (Get-Process explorer -IncludeUserName).UserName.Split("\")[-1]
+    $installerPath = "C:\MSTeams-x64.msix"
 
     Write-Host "Downloading Microsoft Teams installer..." -ForegroundColor Cyan
 
