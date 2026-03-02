@@ -39,7 +39,7 @@ function Create-User {
         [PSCredential]$Credential
     )
 
-    Write-Host "Creating Local User Account..." -ForegroundColor Cyan
+    Write-Output "Creating Local User Account..." 
 
     if (-not $Credential) {
         $Credential = Get-Credential -Message "Enter credentials for the new local user:"
@@ -58,28 +58,28 @@ function Create-User {
 
     try {
         New-LocalUser @params -ErrorAction Stop | Out-Null
-        Write-Host "SUCCESS: Created new user: $username" -ForegroundColor Green
-        "SUCCESS: Created new local user account: $username" | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
+        Write-Output "SUCCESS: Created new user: $username" 
+        "Created new local user account: $username" | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
     } 
     
     catch {
-        Write-Host "FAIL: Unable to create user: $($_.Exception.Message)" -ForegroundColor Red
-        "FAIL: Unable to create local user account: $($_.Exception.Message)" | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
+        Write-Warning "Unable to create user: $($_.Exception.Message)" 
+        "Unable to create local user account: $($_.Exception.Message)" | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
     }
 }
 
 function Invoke-GroupPolicy {
     try {
-        Write-Host "Running Policy Update..." -ForegroundColor Cyan
+        Write-Output "Running Policy Update..."
         gpupdate /target:computer | out-null
         Start-Sleep -Seconds 5
-        Write-Host "SUCCESS: Computer Policy update has completed." -ForegroundColor Green
-        "SUCCESS: Computer Policy update completed. Check Event Viewer for details." | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
+        Write-Output "SUCCESS: Computer Policy update has completed." 
+        "Computer Policy update completed. Check Event Viewer for details." | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
     }
 
     catch {
-        Write-Host "FAIL: Failed to update Computer Policy. Check Event Viewer for details." -ForegroundColor Yellow
-        "FAIL: Unable to update Computer Policy." | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
+        Write-Warning "Unable to update Computer Policy. Check Event Viewer for details."
+        "Unable to update Computer Policy." | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
         $($_.Exception.Message) | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
     }
 }
@@ -89,12 +89,16 @@ function Execute-Actions {
     try {
         $ccmWMI = Get-WmiObject -Namespace "root\ccm" -Class SMS_Client -ErrorAction Stop
         if ($ccmWMI) {
-            Write-Host "ConfigMgr client found (WMI verification)." -ForegroundColor Green
+        Write-Output "Microsoft SCCM client installation found." 
+	    "SUCCESS: Microsoft SCCM client found through WMI verification." | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
         }
     } 
     
     catch {
-        Write-Warning  "ConfigMgr client not found (WMI verification)."
+        Write-Warning  "Unable to locate Microsoft SCCM client."
+	    "Unable to locate Microsoft SCCM client."."" | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
+	    $($_.Exception.Message) | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
+        return
     }
 
     Add-Type -AssemblyName PresentationFramework
@@ -232,12 +236,12 @@ $xaml = @"
     foreach ($action in $chosen) {
         try {
             Invoke-WmiMethod -Namespace root\ccm -Class SMS_CLIENT -Name TriggerSchedule -ArgumentList $action.Guid -ErrorAction Stop | Out-Null
-            Write-Host "SUCCESS: $($action.Name)" -ForegroundColor Green
+            Write-Output "SUCCESS: $($action.Name)" 
             "SUCCESS: $($action.Name)" | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
         } 
         
         catch {
-            Write-Host "FAIL: $($action.Name) $($_.Exception.Message)" -ForegroundColor Red
+            Write-Warning "$($action.Name) $($_.Exception.Message)"
             "FAIL: $($action.Name) $($_.Exception.Message)" | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
         }
         Start-Sleep -Seconds 2
@@ -245,7 +249,7 @@ $xaml = @"
 }
 
 function Run-DellUpdates {
-    Write-Host "Running System Updates..." -ForegroundColor Cyan
+    Write-Output "Running System Updates..."
     $path = 'C:\Program Files\Dell\CommandUpdate\dcu-cli.exe'
     if (Test-Path $path) {
         Start-Sleep -Seconds 2
@@ -255,54 +259,91 @@ function Run-DellUpdates {
     
     else {
         Write-Warning "Dell Command application not detected, skipping updates."
-         "WARN: Dell Command CLI application not detected, skipping updates." | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
+         "Dell Command CLI application not detected, skipping updates." | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
     }
 }
 
 function Disable-Sleep {
-    Write-Host "Disabling Sleep and Lid Closure When Plugged In..." -ForegroundColor Cyan
+    Write-Output "Disabling Sleep and Lid action when plugged in..."
     Start-Sleep 2
     powercfg /change standby-timeout-ac 0
     powercfg -setacvalueindex SCHEME_CURRENT 4f971e89-eebd-4455-a8de-9e59040e7347 5ca83367-6e45-459f-a27b-476b1d01c936 0
-    Write-Host "SUCCESS: Sleep and Lid Closure action when plugged in is disabled." -ForegroundColor Green
-    "SUCCESS: Sleep and Lid Closure action when plugged in has been disabled." | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
+    Write-Output "Sleep and Lid action when plugged in has been disabled."
+    "Sleep and Lid action when plugged in has been disabled." | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
     Start-Sleep 2
 }
 
 function Remove-TempFiles {
     $temp = 'C:\Windows\Temp\'
-    Write-Host "Removing temporary files..." -ForegroundColor Cyan
+    $alttemp = 'C:\Users\*\AppData\Local\Temp'
+  #  $ccm = Get-WmiObject -Namespace "root\ccm\SoftMgmtAgent" -Class CacheElement | ForEach-Object { $_.Delete() }
+  #  $teams = C:\Users\*\AppData\Local\Packages\MSTeams_8wekyb3d8bbwe
+  #  $chrome = C:\Users\*\AppData\Local\Google\Chrome\User Data\*\Cache
+  #  $edge = C:\Users\*\AppData\Local\Microsoft\Edge\User Data\*\Cache
+    Write-Output "Removing temporary files..."
+    Get-ChildItem $alttemp | ForEach-Object { try { Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue } catch {} }
     $itemsremoved = (Get-ChildItem $temp | ForEach-Object { try { Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue; $_ } catch {} }).Count
-    Write-Host "SUCCESS: Removed $itemsremoved temporary files from $temp" -ForegroundColor Green
-
+    $altitemsremoved = (Get-ChildItem $alttemp | ForEach-Object { try { Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue; $_ } catch     
+    {} }).Count
+    "Removed $itemsremoved item(s) from $temp and $altitemsremoved from $alttemp" | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
+    Write-Output "Removed $itemsremoved temporary files from $temp and $altitemsremoved from $alttemp"
 }
 
 function Update-HostsFile {
-    [CmdletBinding()] param(
-        [Parameter(Mandatory)]
-        [ValidatePattern('^(?:\d{1,3}\.){3}\d{1,3}$')] $IPAddress,
-        [Parameter(Mandatory)]
-        [ValidateNotNullOrEmpty()] $Hostname
+    [CmdletBinding()]
+    param(
+        [string]$IPAddress,
+        [string]$Hostname
     )
 
-    $hosts = "$env:SystemRoot\System32\drivers\etc\hosts"
+    # Prompt if blank or null
+    if ([string]::IsNullOrWhiteSpace($IPAddress)) {
+        $IPAddress = Read-Host "Enter IP Address (leave blank to skip)"
+    }
+
+    if ([string]::IsNullOrWhiteSpace($Hostname)) {
+        $Hostname = Read-Host "Enter Hostname (leave blank to skip)"
+    }
+
+    # If either is still blank after prompt → skip
+    if ([string]::IsNullOrWhiteSpace($IPAddress) -or
+        [string]::IsNullOrWhiteSpace($Hostname)) {
+
+        Write-Warning "IP address or hostname is blank. Skipping hosts file update."
+        return
+    }
+
+    # Validate IPv4 address
+    if (-not [System.Net.IPAddress]::TryParse($IPAddress, [ref]$null)) {
+        Write-Warning "Invalid IPv4 address '$IPAddress'. Skipping hosts file update."
+        return
+    }
+
+    $hosts  = "$env:SystemRoot\System32\drivers\etc\hosts"
     $backup = "$hosts.$((Get-Date -f yyyyMMddHHmmss)).bak"
 
+    # Backup the hosts file
     Copy-Item $hosts $backup -Force
 
     $entry = "$IPAddress`t$Hostname"
-    if (-not (Select-String $hosts -Pattern "^\s*$IPAddress\s+$Hostname\s*$" -SimpleMatch)) {
-        Add-Content $hosts $entry
-        "Added: $entry"
+
+    # Check if the entry already exists
+    if (-not (Select-String -Path $hosts -Pattern "^\s*$IPAddress\s+$Hostname\s*$")) {
+        Add-Content -Path $hosts -Value $entry
+        Write-Output "Added: $entry"
+        "SUCCESS: Added $entry to local system hosts file." | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
     }
     else {
-        "Already exists: $entry"
+        Write-Output "Already exists: $entry"
     }
 }
 
 function Clear-MSTeams {
+
+    $installerUrl = "https://go.microsoft.com/fwlink/?linkid=2196106"
+
     # Stop Microsoft Teams processes
-    Write-Host "Stopping Microsoft Teams processes..." -ForegroundColor Cyan
+    Write-Output "Stopping Microsoft Teams processes..."
     Get-Process *teams* -ErrorAction SilentlyContinue | Stop-Process -Force
 
     # Clear Teams cache
@@ -317,16 +358,13 @@ function Clear-MSTeams {
             if (Test-Path $path) {
                 Remove-Item -Path $path -Recurse -Force -ErrorAction SilentlyContinue
                 Write-Output "Cleared Teams cache for $($_.Name) at $path"
+		"Cleared Teams cache for $($_.Name) at $path" | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
             }
         }
     }
 
-    # Download the Microsoft Teams offline installer
-    $installerUrl = "https://go.microsoft.com/fwlink/?linkid=2196106"
-    # $user = (Get-Process explorer -IncludeUserName).UserName.Split("\")[-1]
     $installerPath = "C:\MSTeams-x64.msix"
-
-    Write-Host "Downloading Microsoft Teams installer..." -ForegroundColor Cyan
+    Write-Output "Downloading Microsoft Teams installer..." 
 
     # Disable progress rendering (MAJOR speed improvement)
     $oldProgressPreference = $ProgressPreference
@@ -334,25 +372,31 @@ function Clear-MSTeams {
 
     try {
         Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath -UseBasicParsing
-        Write-Host "Download completed: $installerPath" -ForegroundColor Green
-    } catch {
-        Write-Host "Error downloading installer: $_" -ForegroundColor Red
+        Write-Output "Download completed: $installerPath" 
+	"Download completed: $installerPath" | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
+    } 
+    
+    catch {
+        Write-Error "Error downloading installer: $_"
+	"Download error: $installerPath" | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
         return
-    } finally {
+    } 
+    
+    finally {
         # Restore original preference
         $ProgressPreference = $oldProgressPreference
     }
 
     # Launch the installer
-    Write-Host "Launching installer..." -ForegroundColor Cyan
     Start-Process -FilePath $installerPath
-
-    Write-Host "Microsoft Teams repair complete." -ForegroundColor Green
+    Start-Sleep 3
+    Write-Output "Microsoft Teams repair complete." 
+    "Microsoft Teams repair complete." | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
 }
 
 function Generate-AuditReport {
-    [CmdletBinding()] param([string]$LogFilePath)
 
+    Write-Output "Generating audit report..."
     Add-Type -AssemblyName System.Web
     $safe = { param($v) if ($null -eq $v) { "" } else { [System.Web.HttpUtility]::HtmlEncode($v.ToString()) } }
 
@@ -455,10 +499,11 @@ function Generate-AuditReport {
         $items | ForEach-Object { & $template $_ } | Out-String
     }
 
-    $html = @"
-<html>
+$html = @"
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<meta charset='utf-8'>
+<meta charset="utf-8">
 <title>System Audit Report</title>
 <style>
 @page{size:letter;margin:.25in}
@@ -481,17 +526,19 @@ td{padding:2px 4px;border-bottom:1px solid #eee;vertical-align:top;word-break:br
 .software-table{columns:2;column-gap:14px;font-size:9px}
 .software-table .software-item{padding:2px 4px;break-inside:avoid-column}
 .software-table .software-item:nth-child(odd){background:#f6f6f6}
+.header-right{text-align:right}
 </style>
 </head>
 <body>
+
 <div class="header">
   <div>
     <h1>System Audit Report</h1>
-    <div>$dateGenerated</div>
+    <div>$(& $safe $dateGenerated)</div>
   </div>
-  <div style="text-align:right">
-    <div><strong>Computer:</strong> $computerName</div>
-    <div><strong>Domain:</strong> $domain</div>
+  <div class="header-right">
+    <div><strong>Computer:</strong> $(& $safe $computerName)</div>
+    <div><strong>Domain:</strong> $(& $safe $domain)</div>
   </div>
 </div>
 
@@ -501,70 +548,98 @@ td{padding:2px 4px;border-bottom:1px solid #eee;vertical-align:top;word-break:br
     <div><strong>Model:</strong> $(& $safe $cs.Model)</div>
     <div><strong>Manufacturer:</strong> $(& $safe $cs.Manufacturer)</div>
     <div><strong>Operating System:</strong> $(& $safe $os.Caption) ($(& $safe $os.OSArchitecture))</div>
-    <div><strong>Install Date:</strong> $installDate</div>
+    <div><strong>Install Date:</strong> $(& $safe $installDate)</div>
   </div>
 </div>
 
-<div class="section"><h2>Local Users</h2><ul class="columns-2">
-$($renderList.Invoke($localUsers, {
-    param($u)
-    "<li><strong>$(& $safe $u.Name)</strong><br>Type: $(& $safe $u.Type)<br>Enabled: $($u.Enabled)<br>Last Logon: $($u.LastLogon)<br>Password Expires: $($u.PasswordExpires)</li>"
+<div class="section">
+  <h2>Local Users</h2>
+  <ul class="columns-2">
+$($renderList.Invoke($localUsers, { param($u)
+  "<li><strong>$(& $safe $u.Name)</strong><br>Type: $(& $safe $u.Type)<br>Enabled: $(& $safe $u.Enabled)<br>Last Logon: $(& $safe $u.LastLogon)<br>Password Expires: $(& $safe $u.PasswordExpires)</li>"
 }))
-</ul></div>
+  </ul>
+</div>
 
-<div class="section"><h2>Disks</h2><ul class="columns-2">
-$($renderList.Invoke($disks, { param($d) "<li><strong>$($d.Drive)</strong> - $(& $safe $d.Model)<br>Used: $($d.Used) GB | Free: $($d.Free) GB</li>" }))
-</ul></div>
-
-<div class="section"><h2>Networks</h2><ul class="columns-2">
-$($renderList.Invoke($networks, { param($n) "<li><strong>$(& $safe $n.InterfaceAlias)</strong><br>Description: $(& $safe $n.InterfaceDescription)<br>IPv4: $($n.IPv4Address.IPAddress -join ', ')<br>IPv6: $($n.IPv6Address.IPAddress -join ', ')<br>DNS: $($n.DNSServer.ServerAddresses -join ', ')</li>" }))
-</ul></div>
-
-<div class="section"><h2>Display Devices</h2><ul class="columns-2">
-$($renderList.Invoke($displays, { param($d) "<li><strong>$(& $safe $d.Name)</strong><br>Driver Version: $($d.DriverVersion)</li>" }))
-</ul></div>
-
-<div class="section"><h2>Latest Windows Updates</h2><ul class="columns-2">
-$($renderList.Invoke($updates, {
-    param($u)
-    $date = if ($u.InstalledOn) { (Get-Date $u.InstalledOn).ToString('MM/dd/yyyy') } else { 'Unknown' }
-    "<li><strong>$(& $safe $u.HotFixID)</strong><br>Type: $(& $safe $u.Description)<br>Installed On: $date</li>"
+<div class="section">
+  <h2>Disks</h2>
+  <ul class="columns-2">
+$($renderList.Invoke($disks, { param($d)
+  "<li><strong>$(& $safe $d.Drive)</strong> - $(& $safe $d.Model)<br>Used: $(& $safe $d.Used) GB | Free: $(& $safe $d.Free) GB</li>"
 }))
-</ul></div>
+  </ul>
+</div>
 
-<div class="section"><h2>Local Shares</h2><ul class="columns-2">
-$($renderList.Invoke($shares, { param($s) "<li><strong>$(& $safe $s.Name)</strong><br>Path: $(& $safe $s.Path)<br>Description: $(& $safe $s.Description)<br>Status: $($s.ShareState)</li>" }))
-</ul></div>
+<div class="section">
+  <h2>Networks</h2>
+  <ul class="columns-2">
+$($renderList.Invoke($networks, { param($n)
+  "<li><strong>$(& $safe $n.InterfaceAlias)</strong><br>Description: $(& $safe $n.InterfaceDescription)<br>IPv4: $(& $safe ($n.IPv4Address.IPAddress -join ', '))<br>IPv6: $(& $safe ($n.IPv6Address.IPAddress -join ', '))<br>DNS: $(& $safe ($n.DNSServer.ServerAddresses -join ', '))</li>"
+}))
+  </ul>
+</div>
 
-<div class="section"><h2>Printers</h2><ul class="columns-2">
-$($renderList.Invoke($printers, { param($p) "<li><strong>$(& $safe $p.Name)</strong><br>Driver: $(& $safe $p.DriverName)<br>Type: $($p.Type)<br>Shared: $($p.Shared)<br>Port: $(& $safe $p.PortName)</li>" }))
-</ul></div>
+<div class="section">
+  <h2>Display Devices</h2>
+  <ul class="columns-2">
+$($renderList.Invoke($displays, { param($d)
+  "<li><strong>$(& $safe $d.Name)</strong><br>Driver Version: $(& $safe $d.DriverVersion)</li>"
+}))
+  </ul>
+</div>
 
-<div class="section"><h2>Environment Variables</h2>
-<ul class="env-list">
-$($renderList.Invoke($envVars, { param($e) "<li><strong>$(& $safe $e.Name)</strong><br><span class='env-value'>Value: $(& $safe $e.Value)</span></li>" }))
-</ul>
+<div class="section">
+  <h2>Latest Windows Updates</h2>
+  <ul class="columns-2">
+$($renderList.Invoke($updates, { param($u)
+  $date = if ($u.InstalledOn) { (Get-Date $u.InstalledOn).ToString('MM/dd/yyyy') } else { 'Unknown' }
+  "<li><strong>$(& $safe $u.HotFixID)</strong><br>Type: $(& $safe $u.Description)<br>Installed On: $(& $safe $date)</li>"
+}))
+  </ul>
+</div>
+
+<div class="section">
+  <h2>Local Shares</h2>
+  <ul class="columns-2">
+$($renderList.Invoke($shares, { param($s)
+  "<li><strong>$(& $safe $s.Name)</strong><br>Path: $(& $safe $s.Path)<br>Description: $(& $safe $s.Description)<br>Status: $(& $safe $s.ShareState)</li>"
+}))
+  </ul>
+</div>
+
+<div class="section">
+  <h2>Printers</h2>
+  <ul class="columns-2">
+$($renderList.Invoke($printers, { param($p)
+  "<li><strong>$(& $safe $p.Name)</strong><br>Driver: $(& $safe $p.DriverName)<br>Type: $(& $safe $p.Type)<br>Shared: $(& $safe $p.Shared)<br>Port: $(& $safe $p.PortName)</li>"
+}))
+  </ul>
+</div>
+
+<div class="section">
+  <h2>Environment Variables</h2>
+  <ul class="env-list">
+$($renderList.Invoke($envVars, { param($e)
+  "<li><strong>$(& $safe $e.Name)</strong><br><span class='env-value'>Value: $(& $safe $e.Value)</span></li>"
+}))
+  </ul>
 </div>
 
 <div class="section small">
-<h2>Installed Software</h2>
-<div class="software-table">
+  <h2>Win32 Applications</h2>
+  <div class="software-table">
 $softwareHtml
-</div>
+  </div>
 </div>
 
 </body>
 </html>
 "@
 
-    if (-not $LogFilePath) {
-        $base = [Environment]::GetFolderPath('Desktop')
-        if (-not (Test-Path $base)) { $base = $env:TEMP }
-        $LogFilePath = Join-Path $base "System_Audit_Report.html"
-    }
-
-    $html | Out-File $LogFilePath -Encoding UTF8 -Force
-    Invoke-Item $LogFilePath
+    $html | Out-File 'C:\audit.html'
+    Write-Output "Audit report generated at C:\audit.html"
+    "Audit report generated at C:\audit.html" | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
+    Invoke-Item 'C:\audit.html'
 }
 
 # --- Begin Script Logic ---
@@ -587,6 +662,10 @@ $cpu = (Get-CimInstance Win32_Processor | Select-Object -First 1).Name
 $ram = [math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB, 2)
 $bootVolume = [math]::Round((Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'").FreeSpace / 1GB, 2)
 $bios = (Get-CimInstance Win32_BIOS).ReleaseDate.tostring('MM/dd/yyyy')
+$InstallDate = (gcim Win32_OperatingSystem).InstallDate.ToString()
+$tpmversion = ((Get-CimInstance -Namespace "root/cimv2/security/microsofttpm" -ClassName Win32_Tpm).SpecVersion -split ',')[0].Trim()
+$secboot =  Confirm-SecureBootUEFI
+$ip = (Get-NetIPConfiguration | ? IPv4DefaultGateway).IPv4Address.IPAddress
 
 $messageHeader = @"
 
@@ -599,11 +678,17 @@ $messageHeader = @"
 $messageDetails = @"
  System Summary:
 
- Computer Name: $computer
+ Install Date: $InstallDate
+ Hostname: $computer
+
  CPU: $cpu
- Memory: $ram GB
- Boot Volume Free Space: $bootVolume GB
- BIOS: $bios
+ RAM: $ram GB
+ OS Free Space: $bootVolume GB
+ IP Address: $ip
+
+ Secure Boot: $secboot
+ TPM Version: $tpmversion
+ UEFI: $bios
 
 "@
 
@@ -615,7 +700,7 @@ $messageTasks = @"
  - Install Dell system updates
  - Create a local user account
  - Disable sleep on AC
- - and much more..
+ - and much more
 
 "@
 
@@ -623,11 +708,11 @@ $date = Get-Date
 
 " Execution Date & Time: $date" | Out-File -FilePath $Global:LogFile -Encoding utf8
 
-Write-Host $messageHeader -ForegroundColor Cyan
+Write-Output $messageHeader 
 $messageHeader | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
-Write-Host $messageDetails
+Write-Output $messageDetails
 $messageDetails | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
-Write-Host $messageTasks
+Write-Output $messageTasks
 
 "Task Execution Logs:`n" | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
 
@@ -706,23 +791,23 @@ $xaml = @"
 
                 <!-- Static Checkboxes With Updated Icons -->
                 <CheckBox Name="cbGP" Margin="5"
-                          ToolTip="Run gpupdate to refresh computer policies.">
+                          ToolTip="Refresh computer policies for current domain.">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE923;" FontSize="16" Margin="6,0,8,0"/>
-                        <TextBlock Text="Update Group Policy"/>
+                        <TextBlock Text="Update computer policy"/>
                     </StackPanel>
                 </CheckBox>
 
                 <CheckBox Name="cbCM" Margin="5"
-                          ToolTip="Initiate software/hardware inventory and application deployments.">
+                          ToolTip="Microsoft Endpoint Configuration Manager">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE713;" FontSize="16" Margin="6,0,8,0"/>
-                        <TextBlock Text="Configuration Manager tasks"/>
+                        <TextBlock Text="Config Manager actions"/>
                     </StackPanel>
                 </CheckBox>
 
                 <CheckBox Name="cbDell" Margin="5"
-                          ToolTip="Run Dell Command to check for BIOS, driver, and firmware updates.">
+                          ToolTip="Run Dell Command to install driver and firmware updates.">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE895;" FontSize="16" Margin="6,0,8,0"/>
                         <TextBlock Text="Install Dell system updates"/>
@@ -730,7 +815,7 @@ $xaml = @"
                 </CheckBox>
 
                 <CheckBox Name="cbUser" Margin="5"
-                          ToolTip="Add a new local account for non-domain access.">
+                          ToolTip="Add a new local user for non-domain account access.">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE77B;" FontSize="16" Margin="6,0,8,0"/>
                         <TextBlock Text="Create a local user account"/>
@@ -746,7 +831,7 @@ $xaml = @"
                 </CheckBox>
 
                 <CheckBox Name="cbTempFiles" Margin="5"
-                          ToolTip="Clear temporary files from Windows directory.">
+                          ToolTip="Clear system files to free disk space.">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" FontSize="16" Margin="6,0,8,0"/>
                         <TextBlock Text="Remove temporary files"/>
@@ -754,7 +839,7 @@ $xaml = @"
                 </CheckBox>
 
                 <CheckBox Name="cbEditHosts" Margin="5"
-                          ToolTip="Add local hosts file entry for static DNS resolution.">
+                          ToolTip="Edit local hosts file for hostname IP mapping.">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE211;" FontSize="16" Margin="6,0,8,0"/>
                         <TextBlock Text="Add system hosts entry"/>
@@ -762,15 +847,15 @@ $xaml = @"
                 </CheckBox>
 
                 <CheckBox Name="cbClearTeams" Margin="5"
-                          ToolTip="Clear Teams application cache and run offline MSIX installer.">
+                          ToolTip="Clear Teams cache and run offline installer.">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE78B;" FontSize="16" Margin="6,0,8,0"/>
-                        <TextBlock Text="Repair Microsoft Teams"/>
+                        <TextBlock Text="Update Microsoft Teams"/>
                     </StackPanel>
                 </CheckBox>
 
                 <CheckBox Name="cbAuditReport" Margin="5"
-                          ToolTip="Generate detailed system audit report for migration.">
+                          ToolTip="Output system information HTML report.">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE14C;" FontSize="16" Margin="6,0,8,0"/>
                         <TextBlock Text="Generate system report"/>
@@ -861,7 +946,6 @@ if ($sel.AuditReport) {
 
 "`nScript execution complete." | Out-File -FilePath $Global:LogFile -Encoding utf8 -Append
 
-Write-Host "Script execution complete. See:"
-Write-Host "$Global:LogFile" -Foregroundcolor Gray
-
-Start-Sleep 1
+Write-Output "Script execution complete. See log for details.`
+Generated logfile: $Global:LogFile"
+Start-Sleep 3
